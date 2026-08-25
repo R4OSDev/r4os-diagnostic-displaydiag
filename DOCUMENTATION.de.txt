@@ -1,25 +1,29 @@
 ﻿DISPLAYD.R4X
 ============
 
-DISPLAYD.R4X ist die Display- und Present-Diagnose.
+DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.2 prueft
+zusaetzlich den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
+Regionen, acht geaenderte Pixel, einen externen DISPBLIT-Verbraucher, den
+weiterhin ausgehandelten bootfb-cpu-Fallback, einen synchron abgeschlossenen
+Fence, Input-zu-Present-Zeit und die Ablehnung von mehr als acht Regionen ohne
+eine weitere sichtbare Veroeffentlichung.
 
 Projektstruktur seit 0.51.21:
 - `build.zig` baut die Diagnose als eigenes SDK-Projekt.
 - `build.zig.zon` bindet `r4os_sdk` als Paket.
 - `module.R4MF` beschreibt Artefakt, Zielpfad, R4L-Imports und Contract.
 
-Build:
+Build unter Windows beziehungsweise Linux:
 
-    cd Code\System\Diagnostics\DisplayDiag
-    ..\..\..\DevTools\Zig\zig.exe build
+    Build.bat
+    ./Build.sh
 
-Ergebnis:
-
-    Code\System\Diagnostics\DisplayDiag\zig-out\DISPLAYD.R4X
+Das Artefakt wird gemaess `Settings.R4S` unter
+`Artifacts/Modules/DisplayDiag/DISPLAYD.R4X` abgelegt.
 
 Contract:
 - Build-Profil: `Zig/R4XStart`
-- R4XStart-Entry: `displayd_main`
+- R4XStart-Entry: SDK-App-Entry `r4_app_main`
 - App-Klasse: `console`
 - R4L-Imports: `R4SYS`, `R4DEV`, `R4DRAW`
 - Zielpfad im Image: `C:\R4OS\SOFTWARE\TERMINAL\DIAG\DISPLAYD.R4X`

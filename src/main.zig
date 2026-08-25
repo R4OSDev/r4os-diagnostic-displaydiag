@@ -19,6 +19,7 @@ const App = struct {
         ok = self.checkApi() and ok;
         ok = self.checkSummary() and ok;
         ok = self.checkPresentSmoke() and ok;
+        ok = self.checkDamagePresent() and ok;
         ok = self.checkBenchmarkSmoke() and ok;
 
         self.sys.write("DISPLAYD result: ");
@@ -27,7 +28,9 @@ const App = struct {
     }
 
     fn checkApi(self: *App) bool {
-        const ok = self.dev.hasFn("display_summary") and self.draw.screenWidth() > 0 and self.draw.screenHeight() > 0;
+        const ok = self.dev.hasFn("display_summary") and
+            self.draw.supportsDisplayPresentRegions() and
+            self.draw.screenWidth() > 0 and self.draw.screenHeight() > 0;
         self.printCheck("DISPLAYD api display-summary", ok);
         if (!ok) return false;
         self.sys.write("  R4SYS runtime version=");
@@ -70,6 +73,109 @@ const App = struct {
         self.sys.printU64(summary.present_max_ticks);
         self.sys.write(" cache=");
         self.sys.write(cacheName(summary.cache_policy));
+        self.sys.println("");
+        return ok;
+    }
+
+    fn checkDamagePresent(self: *App) bool {
+        var capabilities: r4os.abi.DisplayPresentCapabilities = .{};
+        if (self.draw.displayPresentCapabilities(&capabilities) != 0) {
+            return self.failBool("DISPLAYD damage capabilities unavailable");
+        }
+        const required_caps = r4os.abi.display_present_cap_cpu_fallback |
+            r4os.abi.display_present_cap_exact_regions |
+            r4os.abi.display_present_cap_sync_fence |
+            r4os.abi.display_present_cap_accelerated_blit |
+            r4os.abi.display_present_cap_external_backend;
+        const backend_name = fixedName24(&capabilities.backend_name);
+        const fallback_name = fixedName24(&capabilities.fallback_name);
+        if (capabilities.backend_kind != r4os.abi.display_present_backend_external_blit or
+            capabilities.max_regions < 2 or
+            (capabilities.flags & required_caps) != required_caps or
+            !equal(backend_name, "DISPBLIT") or
+            !equal(fallback_name, "bootfb-cpu"))
+        {
+            return self.failBool("DISPLAYD damage capabilities failed");
+        }
+
+        const width = self.draw.screenWidth();
+        const height = self.draw.screenHeight();
+        if (width < 8 or height < 8) return self.failBool("DISPLAYD damage geometry too small");
+        const pixel_count_u64 = @as(u64, width) * height;
+        if (pixel_count_u64 == 0 or pixel_count_u64 > ~@as(u32, 0) or pixel_count_u64 > ~@as(usize, 0)) {
+            return self.failBool("DISPLAYD damage source too large");
+        }
+        const allocator = self.sys.allocator();
+        const pixels = allocator.alloc(u32, @intCast(pixel_count_u64)) catch {
+            return self.failBool("DISPLAYD damage source allocation failed");
+        };
+        defer allocator.free(pixels);
+
+        const regions = [_]r4os.abi.DisplayDamageRect{
+            .{ .x = 1, .y = 1, .w = 2, .h = 2 },
+            .{ .x = @intCast(width - 3), .y = @intCast(height - 3), .w = 2, .h = 2 },
+        };
+        fillRegion(pixels, width, regions[0], 0x00_12_34_56);
+        fillRegion(pixels, width, regions[1], 0x00_65_43_21);
+
+        const source_generation: u64 = 0xD15A_0001;
+        const input_tick = self.sys.ticks();
+        self.sys.sleepTicks(1);
+        const before = self.dev.displaySummary() orelse return self.failBool("DISPLAYD damage summary before unavailable");
+        const request = r4os.abi.DisplayPresentRequest{
+            .flags = r4os.abi.display_present_request_flag_input_tick_valid,
+            .source_width = width,
+            .source_height = height,
+            .source_stride_pixels = width,
+            .source_generation = source_generation,
+            .input_tick = input_tick,
+        };
+        var result: r4os.abi.DisplayPresentResult = .{};
+        const present_rc = self.draw.displayPresentRegions(&request, pixels, regions[0..], &result);
+        var completion: r4os.abi.DisplayPresentCompletion = .{};
+        const completion_rc = if (result.fence == 0)
+            r4os.abi.display_present_error_invalid
+        else
+            self.draw.displayPresentCompletion(result.fence, &completion);
+        const after = self.dev.displaySummary() orelse return self.failBool("DISPLAYD damage summary after unavailable");
+
+        const too_many = [_]r4os.abi.DisplayDamageRect{regions[0]} ** 9;
+        var invalid_result: r4os.abi.DisplayPresentResult = .{};
+        const invalid_rc = self.draw.displayPresentRegions(&request, pixels, too_many[0..], &invalid_result);
+        const invalid_after = self.dev.displaySummary() orelse return self.failBool("DISPLAYD damage invalid summary unavailable");
+        const expected_flags = r4os.abi.display_present_result_success |
+            r4os.abi.display_present_result_completed |
+            r4os.abi.display_present_result_accelerated;
+        const ok = present_rc == 0 and
+            (result.flags & expected_flags) == expected_flags and
+            (result.flags & r4os.abi.display_present_result_fallback) == 0 and
+            result.source_generation == source_generation and
+            result.present_generation != 0 and result.fence == result.completed_fence and
+            result.region_count == 2 and result.pixel_count == 8 and
+            result.fallback_regions == 0 and result.backend_error == 0 and
+            result.elapsed_ticks > 0 and equal(fixedName24(&result.backend_name), "DISPBLIT") and
+            completion_rc == 0 and
+            (completion.flags & r4os.abi.display_present_completion_complete) != 0 and
+            completion.fence == result.fence and completion.completed_fence >= result.fence and
+            after.present_count == before.present_count + 1 and
+            after.last_present_pixels == 8 and after.last_present_bytes == 32 and
+            invalid_rc == r4os.abi.display_present_error_invalid and
+            invalid_after.present_count == after.present_count;
+
+        self.sys.write("DISPLAYD damage-present: ");
+        self.sys.write(if (ok) "OK" else "FAILED");
+        self.sys.write(" regions=");
+        self.sys.printU64(result.region_count);
+        self.sys.write(" pixels=");
+        self.sys.printU64(result.pixel_count);
+        self.sys.write(" fence=");
+        self.sys.printU64(result.fence);
+        self.sys.write(" backend=");
+        self.sys.write(fixedName24(&result.backend_name));
+        self.sys.write(" fallback=");
+        self.sys.printU64(result.fallback_regions);
+        self.sys.write(" inputTicks=");
+        self.sys.printU64(result.elapsed_ticks);
         self.sys.println("");
         return ok;
     }
@@ -152,6 +258,30 @@ fn fixedName(value: *const [32]u8) []const u8 {
     var len: usize = 0;
     while (len < value.len and value[len] != 0) : (len += 1) {}
     return value[0..len];
+}
+
+fn fixedName24(value: *const [24]u8) []const u8 {
+    var len: usize = 0;
+    while (len < value.len and value[len] != 0) : (len += 1) {}
+    return value[0..len];
+}
+
+fn fillRegion(pixels: []u32, stride: u32, rect: r4os.abi.DisplayDamageRect, color: u32) void {
+    var y: u32 = 0;
+    while (y < rect.h) : (y += 1) {
+        var x: u32 = 0;
+        while (x < rect.w) : (x += 1) {
+            const offset = (@as(usize, @intCast(rect.y)) + y) * stride + @as(usize, @intCast(rect.x)) + x;
+            pixels[offset] = color ^ (x << 8) ^ y;
+        }
+    }
+}
+
+fn equal(a: []const u8, b: []const u8) bool {
+    if (a.len != b.len) return false;
+    var index: usize = 0;
+    while (index < a.len) : (index += 1) if (a[index] != b[index]) return false;
+    return true;
 }
 
 fn cacheName(value: u8) []const u8 {

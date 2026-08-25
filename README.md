@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.1`
+- Version: `0.1.2`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -21,6 +21,11 @@ On Windows:
 On Linux or macOS:
 
     ./Build.sh
+
+The diagnostic validates display discovery, legacy presentation and the
+canonical bounded multi-region XRGB32 path, including backend/fallback
+capabilities, exact work accounting, synchronous completion and
+input-to-present ticks.
 
 The build starters resolve the current local R4OS dependency checkouts through
 `Settings.R4S`. The URL and hash entries in `build.zig.zon` record the
