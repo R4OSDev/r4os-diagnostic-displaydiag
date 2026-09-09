@@ -91,5 +91,15 @@ Contract:
 - Build-Profil: `Zig/R4XStart`
 - R4XStart-Entry: SDK-App-Entry `r4_app_main`
 - App-Klasse: `console`
-- R4L-Imports: `R4SYS`, `R4DEV`, `R4DRAW`
+- Platform-API-Imports: `R4SYS`, `R4DEV`, `R4DRAW`; Runtime-R4L: `R4GFX`
 - Zielpfad im Image: `C:\R4OS\SOFTWARE\TERMINAL\DIAG\DISPLAYD.R4X`
+
+Grafikpuffer seit 0.79.5
+-----------------------
+DISPLAYD /BUFFERS nutzt R4GFX fuer gepruefte Software-Pixeloperationen auf
+echten gemeinsamen BOs. Import, zwei Maps, Pitch-Padding, veraltete Freigabe
+und exakte Besitzer-/Bytebilanz werden geprueft. Vier Ergebnisstrukturen
+beginnen mit residentem Header am Seitenende und wachsen beim API-Aufruf in
+eine Demand-Seite; die Ausgabe muss nach Owner-Freigabe erfolgen.
+/BUFFERS /DRIVER verlangt zusaetzlich den EXAMPLE gfx-memory-test-Marker
+dieses Boots. Es ist keine GPU-/NVIDIA-/VBlank-Abnahme.

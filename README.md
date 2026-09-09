@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.4`
+- Version: `0.1.5`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -64,3 +64,9 @@ Detailed German technical notes from the migration are preserved in
 Original R4OS material is licensed under Apache License 2.0. See `LICENSE`
 and `NOTICE`. Any repository-specific external material is documented in
 `THIRD_PARTY_NOTICES.md`.
+
+`/BUFFERS` loads R4GFX and checks real software pixels and row padding,
+shared BO imports, concurrent read maps, stale release and exact lifetime
+balance. Four result structures cross from a resident header into an initially
+nonresident page to verify publication outside memory owners. `/BUFFERS
+/DRIVER` also requires this boot's successful EXAMPLE gfx-memory-test marker.

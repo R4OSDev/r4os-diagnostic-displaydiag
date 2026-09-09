@@ -1,5 +1,6 @@
 # DisplayDiag repository path mappings. Relative to this repository root.
 SDK_ROOT=../../SDK
+LIBRARIES_ROOT=../../Libraries
 CONTRACT_ROOT=../../Contract
 DEVKIT_ROOT=../../../DevKit
 ARTIFACTS_ROOT=../../../Artifacts/Modules/DisplayDiag

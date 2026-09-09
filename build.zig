@@ -9,7 +9,11 @@ pub fn build(b: *std.Build) void {
     const sdk_build = b.lazyImport(@This(), "r4os_sdk") orelse return;
     const sdk_dep = b.dependencyFromBuildZig(sdk_build, .{});
     const sdk = sdk_build.sdk(b, sdk_dep, .{});
-    _ = sdk.addR4MF(b.path("module.R4MF"));
+    const libraries_build = b.lazyImport(@This(), "r4os_libraries") orelse return;
+    const libraries = b.dependencyFromBuildZig(libraries_build, .{});
+    _ = sdk.addR4MFWithOptions(b.path("module.R4MF"), .{
+        .zig_module_roots = &.{libraries.namedLazyPath("r4gfx_zig_binding")},
+    });
     const tests = b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("src/scenes.zig"),
         .target = b.graph.host,
