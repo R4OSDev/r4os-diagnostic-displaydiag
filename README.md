@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.3`
+- Version: `0.1.4`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -27,6 +27,13 @@ canonical bounded multi-region XRGB32 path, including backend/fallback
 capabilities, exact work accounting, synchronous completion and
 input-to-present ticks. Both the external CPU blitter and the boot framebuffer
 CPU fallback are accepted. A completed fence means CPU store completion.
+
+`DISPLAYD /STATE` reads the coherent display-owner snapshot: active and pending
+owner/generation, policy, fallback reason, capabilities and saved boot mode.
+It does not present a frame or probe hardware. Older kernels without the
+optional R4DEV slot report it as unavailable. The normal smoke also accepts
+CPU presentation onto native scanout (`native-cpu`); GPU completion is not
+implied.
 
 `DISPLAYD /BASELINE` runs bounded CPU reference scenes in RAM. Add `/PRESENT`
 to submit diagnostic images to the active screen, `/SAMPLES=1..64` to select

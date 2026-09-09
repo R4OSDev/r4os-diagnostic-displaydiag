@@ -79,6 +79,51 @@ const App = struct {
         return ok;
     }
 
+    fn reportState(self: *App) i32 {
+        const value = self.dev.displayState() orelse {
+            self.sys.println("DISPLAYD state: unavailable (R4DEV display_state required)");
+            return r4os.abi.err_no_fn;
+        };
+        const states = [_][]const u8{ "unavailable", "bootfb", "preparing", "native", "software-native", "recovering" };
+        const policies = [_][]const u8{ "automatic", "software", "software-once" };
+        const reasons = [_][]const u8{ "none", "no-native-backend", "policy-disabled", "backend-rejected", "prepare-failed", "commit-failed", "device-lost", "restore-failed" };
+        const ok = value.version == 1 and value.size >= @sizeOf(r4os.abi.DisplayStateInfo) and
+            value.state < states.len and value.policy < policies.len and value.reason < reasons.len and
+            (value.state == r4os.abi.display_state_unavailable or value.device_generation != 0);
+        self.sys.write("DISPLAYD state: ");
+        self.sys.write(if (ok) "OK" else "FAILED");
+        self.sys.write(" state=");
+        self.sys.write(if (value.state < states.len) states[value.state] else "unknown");
+        self.sys.write(" policy=");
+        self.sys.write(if (value.policy < policies.len) policies[value.policy] else "unknown");
+        self.sys.write(" reason=");
+        self.sys.write(if (value.reason < reasons.len) reasons[value.reason] else "unknown");
+        self.sys.write(" backend=");
+        self.sys.write(fixedName24(&value.backend_name));
+        self.sys.write(" fallback=");
+        self.sys.write(fixedName24(&value.fallback_name));
+        self.sys.write(" generation=");
+        self.sys.printU64(value.device_generation);
+        self.sys.write(" reset=");
+        self.sys.printU64(value.reset_generation);
+        self.sys.write(" owner=");
+        self.sys.printU64(value.driver_owner);
+        self.sys.write(" adapter=");
+        self.sys.printU64(value.adapter_id);
+        self.sys.write(" pending-owner=");
+        self.sys.printU64(value.pending_driver_owner);
+        self.sys.write(" pending-generation=");
+        self.sys.printU64(value.pending_generation);
+        self.sys.write(" caps=");
+        self.sys.printU64(value.capabilities);
+        self.sys.write(" boot=");
+        self.sys.printU64(value.boot_width);
+        self.sys.write("x");
+        self.sys.printU64(value.boot_height);
+        self.sys.println("");
+        return if (ok) 0 else 1;
+    }
+
     fn checkDamagePresent(self: *App) bool {
         var capabilities: r4os.abi.DisplayPresentCapabilities = .{};
         if (self.draw.displayPresentCapabilities(&capabilities) != 0) {
@@ -90,10 +135,12 @@ const App = struct {
         const backend_name = fixedName24(&capabilities.backend_name);
         const fallback_name = fixedName24(&capabilities.fallback_name);
         const external = capabilities.backend_kind == r4os.abi.display_present_backend_external_blit;
-        if ((!external and capabilities.backend_kind != r4os.abi.display_present_backend_bootfb_cpu) or capabilities.max_regions < 2 or
+        const native_cpu = equal(fallback_name, "native-cpu");
+        if ((!external and capabilities.backend_kind != r4os.abi.display_present_backend_bootfb_cpu and
+            capabilities.backend_kind != r4os.abi.display_present_backend_native_cpu) or capabilities.max_regions < 2 or
             (capabilities.flags & required_caps) != required_caps or
             backend_name.len == 0 or
-            !equal(fallback_name, "bootfb-cpu"))
+            (!equal(fallback_name, "bootfb-cpu") and !native_cpu))
         {
             return self.failBool("DISPLAYD damage capabilities failed");
         }
@@ -246,7 +293,12 @@ const App = struct {
 
 pub fn r4_app_main(r4_app: *r4os.App) i32 {
     const sys = r4_app.system();
-    if (baseline.requested(std.mem.span(sys.argsRaw()))) return baseline.run(r4_app);
+    const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    if (std.ascii.eqlIgnoreCase(args, "/STATE")) {
+        var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
+        return app.reportState();
+    }
+    if (baseline.requested(args)) return baseline.run(r4_app);
     var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
     return app.run();
 }
