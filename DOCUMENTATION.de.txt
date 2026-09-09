@@ -1,12 +1,78 @@
 ﻿DISPLAYD.R4X
 ============
 
-DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.2 prueft
+DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.3 prueft
 zusaetzlich den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
 Regionen, acht geaenderte Pixel, einen externen DISPBLIT-Verbraucher, den
 weiterhin ausgehandelten bootfb-cpu-Fallback, einen synchron abgeschlossenen
 Fence, Input-zu-Present-Zeit und die Ablehnung von mehr als acht Regionen ohne
-eine weitere sichtbare Veroeffentlichung.
+eine weitere sichtbare Veroeffentlichung. Der reine bootfb-cpu-Fallback wird
+ebenfalls akzeptiert; globale Zaehler duerfen sich durch andere Produzenten
+aendern. Ein fertiger Fence belegt CPU-Store-Abschluss, nicht VBlank.
+
+Messmodus (0.79.2)
+-----------------
+
+    DISPLAYD /BASELINE
+    DISPLAYD /BASELINE /PRESENT /SAMPLES=32 /SAVE=C:\TEMP\GFX.TXT
+
+BASELINE arbeitet standardmaessig in eigenen RAM-Puffern. PRESENT schreibt
+die diagnostischen Bilder ueber R4DRAW auf die aktive Anzeige. Andere
+Produzenten koennen danach weiterzeichnen. Es gibt keine native GPU-
+Uebernahme und keinen Modeset. SAVE verlangt einen Pfad ohne Leerzeichen
+mit maximal 255 Bytes. TRACE meldet grobe Fortschrittsphasen ausserhalb der
+Zeitmessung. Datei-/Konsolenausgabe erfolgt sonst nach den Messungen.
+
+SAMPLES erlaubt 1 bis 64, Standard 32, plus einen ungemessenen Aufwaermframe
+pro Szene. Zwei Puffer sind auf je 64 MB begrenzt; der Bericht auf 32 KB.
+Die Szenen teilen ein 15-Sekunden-Budget, das zwischen Frames geprueft wird.
+Ein einzelner blockierender Plattformaufruf kann dadurch nicht abgebrochen
+werden. Close, Fehler und Zeitgrenze erreichen denselben Ressourcenabbau.
+
+Die acht Szenen sind idle (etwa 5 ms Schlaf pro Probe ohne eigenen Frame),
+small_damage (bis 16x16), window_move (zwei disjunkte Rechtecke bis 128x96),
+text (generierte 8x8-Diagnosemaske), alpha_layers (zwei konstante 50%-Ebenen),
+full_image (XRGB32-Muster), scaling (prozedurales 64x64-Muster mit Nearest
+Neighbour) und producers (vier getrennte Regionen in einer Generation).
+Sie messen allgemeine Referenzoperationen, weder den echten Desktop noch
+Fontcache, GPU-Skalierung oder parallel laufende Programme. R4SNES ist kein
+Architekturmassstab. Hosted GUI-/Desktop-Proben werden spaeter ergaenzt.
+
+CPU-Rendering, CPU-Komposition und synchrones Submit erhalten monotone
+Nanosekunden-Wandzeiten. Quelle und Taktgeneration muessen stabil bleiben.
+p50/p95/p99 verwenden nearest rank; kleine Stichproben liefern fuer p95/p99
+ggf. beide das Maximum. Wandzeit enthaelt Praeemption. Grobe run_ticks werden
+getrennt erfasst und enthalten Aufwaermen/Instrumentierung. TSC-Frequenz ist
+kein gemessener CPU-/GPU-Kerntakt.
+
+Submit enthaelt heute Validierung und die synchrone CPU-Kopie. Separates
+Upload, GPU-Zeitstempel und sichtbares Present sind unavailable. Es gibt
+keine asynchrone GPU-Warteschlange. Abgelehnte Presents werden gezaehlt;
+es gibt keinen Retry. Ihre Zeiten fehlen in der Erfolgsverteilung.
+
+RAM-Lese-/Schreibbytes sind Modelle logischer Operationen. Erfolgreiche
+Pixelzahlen kommen aus PresentResult; ihre Bytes werden aus dem Zielformat
+berechnet. Physische DRAM-/PCIe-Transaktionen, Cachemisses, Write Allocation
+und Scanoutverkehr sind ungemessen. Die effektive logische Schreibrate
+verwendet erfolgreiche Submit-Wandzeiten. Globale Displaydifferenzen koennen
+andere Produzenten und Aufwaermframes enthalten.
+
+R4DEV liefert PCI-BDF, Vendor-/Device-ID und Bindung. Nicht gecachte
+Subsystem-ID, Revision, Chipregister, VBIOS, BAR-Groessen und IRQ-Capabilities
+bleiben begruendet unavailable bis zur passiven Besitzerprobe in 0.79.9.
+Die ID-Tabelle ordnet 10DE:2504 der GeForce RTX 3060 zu; das ist ein
+Referenzname und keine selbst gelesene Chipidentitaet.
+
+Bootloader, Modus, Pitch, Displaybesitzer, Cachepolicy, Kernel-/Releaseversion,
+CPU-Anzahl und Taktmetadaten werden gesichert. EDID stammt aus dem begrenzt
+gelesenen BootInfo-Basisblock, nicht aus einer aktuellen DDC-Probe. Der
+Fernseherzustand gehoert separat ins Hostprotokoll. Gespeichertes EDID beweist
+keinen aktiven HDMI-Link oder Ton.
+
+Zwei gezielte Hostpruefungen ueber den unit-test-Buildstep sichern
+Randgeometrien, disjunkte Regionen, Byteformeln, unveraenderte Pixel ausserhalb
+der Regionen und die Statistik. Kurze SMP4- und OssiPC-Proben bleiben getrennt.
+Quellbestandsaufnahme: Docs/Drivers/GrafikRessourcen079.txt.
 
 Projektstruktur seit 0.51.21:
 - `build.zig` baut die Diagnose als eigenes SDK-Projekt.

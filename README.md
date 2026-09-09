@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.2`
+- Version: `0.1.3`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -18,14 +18,28 @@ On Windows:
 
     Build.bat
 
-On Linux or macOS:
+On Linux:
 
     ./Build.sh
 
 The diagnostic validates display discovery, legacy presentation and the
 canonical bounded multi-region XRGB32 path, including backend/fallback
 capabilities, exact work accounting, synchronous completion and
-input-to-present ticks.
+input-to-present ticks. Both the external CPU blitter and the boot framebuffer
+CPU fallback are accepted. A completed fence means CPU store completion.
+
+`DISPLAYD /BASELINE` runs bounded CPU reference scenes in RAM. Add `/PRESENT`
+to submit diagnostic images to the active screen, `/SAMPLES=1..64` to select
+the sample count (default 32), and `/SAVE=C:\TEMP\GFX.TXT` to save the report.
+`/TRACE` prints progress outside the measured phases. The baseline records
+monotonic render/composition/submit wall times, nearest-rank percentiles,
+scheduler ticks, logical byte models, presentation results and available
+hardware/clock metadata. Unavailable hardware fields, GPU timestamps and
+visible presentation timing are identified explicitly. It does not measure
+Desktop's compositor, physical bus traffic, concurrent processes or live DDC.
+
+Run `Build.bat unit-test` or `./Build.sh unit-test` for the two focused host
+checks of scene bounds/byte models and sample statistics.
 
 The build starters resolve the current local R4OS dependency checkouts through
 `Settings.R4S`. The URL and hash entries in `build.zig.zon` record the

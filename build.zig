@@ -10,4 +10,9 @@ pub fn build(b: *std.Build) void {
     const sdk_dep = b.dependencyFromBuildZig(sdk_build, .{});
     const sdk = sdk_build.sdk(b, sdk_dep, .{});
     _ = sdk.addR4MF(b.path("module.R4MF"));
+    const tests = b.addTest(.{ .root_module = b.createModule(.{
+        .root_source_file = b.path("src/scenes.zig"),
+        .target = b.graph.host,
+    }) });
+    b.step("unit-test", "Check bounded scene geometry and sample statistics").dependOn(&b.addRunArtifact(tests).step);
 }
