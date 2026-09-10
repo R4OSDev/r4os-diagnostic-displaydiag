@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.8`
+- Version: `0.1.9`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -26,7 +26,8 @@ The diagnostic validates display discovery, legacy presentation and the
 canonical bounded multi-region XRGB32 path, including backend/fallback
 capabilities, exact work accounting, synchronous completion and
 input-to-present ticks. Both the external CPU blitter and the boot framebuffer
-CPU fallback are accepted. A completed fence means CPU store completion.
+CPU fallback are accepted. Fence completion follows the selected backend's
+milestone; CPU stores or device execution do not prove visible VBlank.
 
 `DISPLAYD /STATE` reads the coherent display-owner snapshot: active and pending
 owner/generation, policy, fallback reason, capabilities and saved boot mode.
@@ -104,3 +105,8 @@ VIRTGPU `mode=timeout` fixture and checks third-frame failure, acknowledged
 bootfb recovery and release of the native BO and attachment lease.
 The runner verifies 16384 captured pixels in each of two QMP screenshots.
 These modes prove virtual device execution; they do not measure VBlank.
+
+`DISPLAYD /NVIDIA` replays complete bounded NVIDIA driver boot records.
+It does not probe PCI/MMIO or infer native GPU, connector or HDMI audio
+support from a PCI name. Missing records are reported as unavailable.
+The passive NVIDIA owner and physical hardware acceptances remain separate.

@@ -113,3 +113,8 @@ mode=timeout und prueft Fehler im dritten Frame, bestaetigten Reset,
 bootfb-Wiederherstellung und Freigabe von BO/Referenzen/Attachmentlease.
 Die externe QMP-Pixelpruefung ergaenzt diesen normalen Diagnoseeinstieg.
 Keine VBlank-, NVIDIA- oder physische HDMI-Abnahme.
+
+0.79.9 / DISPLAYD 0.1.9: /NVIDIA gibt vollstaendige NVIDIA-Zeilen aus dem
+begrenzten Bootlog aus, ohne selbst PCI/MMIO abzufragen. Fehlende oder
+abgeschnittene Datensaetze sind kein positiver Hardwarebefund. Die Ausgabe
+ist ein Boot-Snapshot; eine spaetere Realhardwareabnahme bleibt gesondert.
