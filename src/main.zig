@@ -191,6 +191,7 @@ const App = struct {
         const invalid_rc = self.draw.displayPresentRegions(&request, pixels, too_many[0..], &invalid_result);
         const expected_flags = r4os.abi.display_present_result_success |
             r4os.abi.display_present_result_completed;
+        const cpu_stores = (capabilities.flags & r4os.abi.display_present_cap_cpu_store_completion) != 0;
         const ok = present_rc == 0 and
             (result.flags & expected_flags) == expected_flags and
             result.source_generation == source_generation and
@@ -199,6 +200,7 @@ const App = struct {
             result.elapsed_ticks > 0 and fixedName24(&result.backend_name).len > 0 and
             completion_rc == 0 and
             (completion.flags & r4os.abi.display_present_completion_complete) != 0 and
+            (!cpu_stores or (completion.flags & r4os.abi.display_present_completion_cpu_stores) != 0) and
             completion.fence == result.fence and completion.completed_fence >= result.fence and
             after.present_count >= before.present_count + 1 and
             invalid_rc == r4os.abi.display_present_error_invalid and
@@ -218,6 +220,7 @@ const App = struct {
         self.sys.printU64(result.fallback_regions);
         self.sys.write(" inputTicks=");
         self.sys.printU64(result.elapsed_ticks);
+        self.sys.write(if (cpu_stores) " completion=cpu-stores" else " completion=legacy");
         self.sys.println("");
         return ok;
     }
@@ -294,6 +297,10 @@ const App = struct {
 pub fn r4_app_main(r4_app: *r4os.App) i32 {
     const sys = r4_app.system();
     const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    if (std.ascii.eqlIgnoreCase(args, "/QUEUECHILD")) return @import("queues.zig").child(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/QUEUES") or std.ascii.eqlIgnoreCase(args, "/QUEUES /DRIVER")) {
+        return @import("queues.zig").run(r4_app, args.len > 7);
+    }
     if (std.ascii.eqlIgnoreCase(args, "/BUFFERS") or std.ascii.eqlIgnoreCase(args, "/BUFFERS /DRIVER")) {
         return @import("buffers.zig").run(r4_app, args.len > 8);
     }

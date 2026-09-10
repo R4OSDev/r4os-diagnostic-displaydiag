@@ -26,7 +26,7 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
     return if (passed) 0 else 1;
 }
 
-fn logContains(sys: *const r4os.r4sys.Context, needle: []const u8) bool {
+pub fn logContains(sys: *const r4os.r4sys.Context, needle: []const u8) bool {
     var chunk: [2048]u8 = undefined;
     var offset: u32 = 0;
     // Overlap reads so a record split at a chunk boundary remains visible.

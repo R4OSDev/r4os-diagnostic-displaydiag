@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.5`
+- Version: `0.1.6`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -70,3 +70,15 @@ shared BO imports, concurrent read maps, stale release and exact lifetime
 balance. Four result structures cross from a resident header into an initially
 nonresident page to verify publication outside memory owners. `/BUFFERS
 /DRIVER` also requires this boot's successful EXAMPLE gfx-memory-test marker.
+
+`/QUEUES` performs two asynchronous 8-MB software-buffer copies linked by an
+explicit fence, releases the producer references early and verifies actual
+bytes, untouched padding and balanced backing after the resource wait.
+`/QUEUES /DRIVER` also requires `OPTION EXAMPLE mode=gfx-queue-test`. It checks
+logical cancellation before physical retirement, three concurrent waiters,
+timer-IRQ completion, stale reset generations and hard-kill of a producer
+with three blocked graphics tasks. `/QUEUECHILD` is its internal subprocess
+fixture and intentionally leaves handles to process cleanup. These modes
+do not perform GPU DMA, visible presentation or HDMI-audio tests. The SMP4
+acceptance additionally injects the `g` key and verifies SSH progress while
+the first driver resource wait is pending.
