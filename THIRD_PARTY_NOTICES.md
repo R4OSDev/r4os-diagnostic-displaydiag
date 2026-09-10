@@ -1,7 +1,8 @@
 ﻿# Third-Party Notices
 
-No third-party source code, binary, font, certificate, or other redistributable
-material has been identified in this repository.
-
-R4OS dependencies referenced by the build metadata are separate R4OS projects
-and retain their own licenses and notices.
+DISPLAYD compiles the R4GFX EDID helper from the separate Libraries project.
+Its CTA timing table is derived from libdisplay-info under MIT, Copyright
+(c) 2022 The libdisplay-info Contributors. Exact provenance and the complete
+license are in `R4GFX/ThirdParty/DisplayInfo/` in that repository. The image
+ships the notice as `/R4OS/LICENSES/libdisplay-info-MIT.txt`.
+Original R4OS code remains Apache-2.0. No upstream parser code is copied.

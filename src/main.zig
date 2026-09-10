@@ -297,6 +297,9 @@ const App = struct {
 pub fn r4_app_main(r4_app: *r4os.App) i32 {
     const sys = r4_app.system();
     const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    if (std.ascii.eqlIgnoreCase(args, "/OUTPUTS") or std.ascii.eqlIgnoreCase(args, "/OUTPUTS /DRIVER")) {
+        return @import("outputs.zig").run(r4_app, args.len > 8);
+    }
     if (std.ascii.eqlIgnoreCase(args, "/QUEUECHILD")) return @import("queues.zig").child(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/QUEUES") or std.ascii.eqlIgnoreCase(args, "/QUEUES /DRIVER")) {
         return @import("queues.zig").run(r4_app, args.len > 7);

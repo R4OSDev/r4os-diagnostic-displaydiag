@@ -14,6 +14,9 @@
         },
     },
     .paths = .{
+        "Build.bat",
+        "Build.sh",
+        "Build.ps1",
         "LICENSE",
         "NOTICE",
         "README.md",

@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.6`
+- Version: `0.1.7`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -82,3 +82,14 @@ fixture and intentionally leaves handles to process cleanup. These modes
 do not perform GPU DMA, visible presentation or HDMI-audio tests. The SMP4
 acceptance additionally injects the `g` key and verifies SSH progress while
 the first driver resource wait is pending.
+
+`/OUTPUTS` checks the fixed firmware connector, exact boot geometry and
+EDID availability, rejects invalid composite state without device changes,
+and commits only retention of the existing firmware scanout.
+`/OUTPUTS /DRIVER` additionally drives EXAMPLE's explicit virtual output fixture:
+disconnect, a new receiver generation, reset, stale identity rejection and
+the existing desktop activity wait. Neither option programs a native mode
+or claims physical HDMI/DisplayPort detection. BO resources must balance.
+
+Build.bat and Build.sh launch the same Build.ps1 and the SDK's shared module
+builder, including caller-supplied Zig arguments and local library paths.
