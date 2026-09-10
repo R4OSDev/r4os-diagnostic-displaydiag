@@ -103,3 +103,13 @@ beginnen mit residentem Header am Seitenende und wachsen beim API-Aufruf in
 eine Demand-Seite; die Ausgabe muss nach Owner-Freigabe erfolgen.
 /BUFFERS /DRIVER verlangt zusaetzlich den EXAMPLE gfx-memory-test-Marker
 dieses Boots. Es ist keine GPU-/NVIDIA-/VBlank-Abnahme.
+
+0.79.8 / DISPLAYD0.1.8: /VIRTIO zeigt strukturierte Treiberlogs; /TEST prueft
+32 wechselnde Bilder und stabile BO-Ressourcen. /RESIZE verlangt zweimal die
+Hostfenster-Aenderung des expliziten Distribution-Grafikprofils waehrend
+eines 5-Sekunden-Leerlaufs. Empfaengergeneration, alte EDID-Referenzen und
+aktive Festgeometrie werden geprueft. /FAIL verlangt OPTION VIRTGPU
+mode=timeout und prueft Fehler im dritten Frame, bestaetigten Reset,
+bootfb-Wiederherstellung und Freigabe von BO/Referenzen/Attachmentlease.
+Die externe QMP-Pixelpruefung ergaenzt diesen normalen Diagnoseeinstieg.
+Keine VBlank-, NVIDIA- oder physische HDMI-Abnahme.

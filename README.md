@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.7`
+- Version: `0.1.8`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `test`
 - Canonical project manifest: `module.R4MF`
@@ -93,3 +93,14 @@ or claims physical HDMI/DisplayPort detection. BO resources must balance.
 
 Build.bat and Build.sh launch the same Build.ps1 and the SDK's shared module
 builder, including caller-supplied Zig arguments and local library paths.
+
+`/VIRTIO` prints the driver's bounded structured boot records. `/VIRTIO /TEST`
+presents 32 alternating sparse frames and checks exact shared-BO lifetime
+balance. `/VIRTIO /RESIZE` additionally expects the explicit distribution
+runner to change the host's virtual monitor twice during its five-second
+idle windows; it verifies new receiver generations, stale EDID rejection
+and retained active source geometry. `/VIRTIO /FAIL` requires the explicit
+VIRTGPU `mode=timeout` fixture and checks third-frame failure, acknowledged
+bootfb recovery and release of the native BO and attachment lease.
+The runner verifies 16384 captured pixels in each of two QMP screenshots.
+These modes prove virtual device execution; they do not measure VBlank.
