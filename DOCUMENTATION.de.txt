@@ -1,6 +1,8 @@
 ﻿DISPLAYD.R4X
 ============
 
+Ab R4OS 0.79.9 im Full-Profil enthalten; Diagnose startet nur auf Aufruf.
+
 DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.3 prueft
 zusaetzlich den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
 Regionen, acht geaenderte Pixel, einen externen DISPBLIT-Verbraucher, den
