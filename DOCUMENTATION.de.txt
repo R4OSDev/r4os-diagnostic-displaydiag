@@ -120,3 +120,8 @@ Keine VBlank-, NVIDIA- oder physische HDMI-Abnahme.
 begrenzten Bootlog aus, ohne selbst PCI/MMIO abzufragen. Fehlende oder
 abgeschnittene Datensaetze sind kein positiver Hardwarebefund. Die Ausgabe
 ist ein Boot-Snapshot; eine spaetere Realhardwareabnahme bleibt gesondert.
+
+DISPLAYD 0.1.10: /NVIDIA [Text] filtert die vorhandenen vollstaendigen
+Bootzeilen ohne Gross-/Kleinschreibung. Maximal128 Filterbytes; keine
+Treffer werden mit Exitstatus1 gemeldet. /NVIDIA boot- oder rejected
+begrenzt SSH-Ausgaben. Keine erneute Hardwareprobe. Auf OssiPC geprueft.

@@ -4,9 +4,9 @@
 
 ## Package
 
-- Version: `0.1.9`
+- Version: `0.1.10`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
-- Image scope: `test`
+- Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
@@ -106,7 +106,11 @@ bootfb recovery and release of the native BO and attachment lease.
 The runner verifies 16384 captured pixels in each of two QMP screenshots.
 These modes prove virtual device execution; they do not measure VBlank.
 
-`DISPLAYD /NVIDIA` replays complete bounded NVIDIA driver boot records.
+`DISPLAYD /NVIDIA [text]` replays complete bounded NVIDIA driver boot records.
+An optional case-insensitive substring of up to 128 bytes selects relevant
+lines, e.g. `/NVIDIA boot-` or `/NVIDIA rejected`, to keep SSH output small.
+No match is reported explicitly with exit status 1; no filter preserves the
+complete replay. The reader retains its existing 64-KB boot-log bound.
 It does not probe PCI/MMIO or infer native GPU, connector or HDMI audio
 support from a PCI name. Missing records are reported as unavailable.
 The passive NVIDIA owner and physical hardware acceptances remain separate.
