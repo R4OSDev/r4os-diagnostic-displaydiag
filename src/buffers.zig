@@ -9,9 +9,10 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
     const draw = app.drawing() orelse return 1;
     const buffers = draw.buffers();
     const library = gfx.ApiV1Client.init(app.startContext()) catch return 1;
+    const render = gfx.RenderV1Client.init(app.startContext()) catch return 1;
     var before: a.GfxBufferStats = .{};
     var after: a.GfxBufferStats = .{};
-    var passed = buffers.stats(&before) == ok and exercise(&sys, &buffers, &library);
+    var passed = buffers.stats(&before) == ok and exercise(&sys, &buffers, &library, &render);
     passed = buffers.stats(&after) == ok and passed;
     passed = passed and before.objects == after.objects and before.references == after.references and
         before.leases == after.leases and before.committed_bytes == after.committed_bytes and before.retained_bytes == after.retained_bytes;
@@ -45,7 +46,7 @@ pub fn logContains(sys: *const r4os.r4sys.Context, needle: []const u8) bool {
     return false;
 }
 
-fn exercise(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Context, library: *const gfx.ApiV1Client) bool {
+fn exercise(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Context, library: *const gfx.ApiV1Client, render: *const gfx.RenderV1Client) bool {
     var layout: gfx.R4GfxLinearLayout = undefined;
     if (library.linear_layout(13, 7, a.gfx_buffer_format_xrgb8888, 64, &layout) != gfx.status_ok or layout.pitch != 64 or layout.byte_length != 448) return false;
     const descriptor = a.GfxBufferDescriptor{
@@ -68,6 +69,7 @@ fn exercise(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Con
         _ = buffers.unmap(&write.lease);
     };
     const image = gfx.R4GfxCpuImage{ .cpu_address = write.cpu_address, .byte_length = write.byte_length, .pitch = layout.pitch, .width = layout.width, .height = layout.height, .format = layout.format, .reserved = 0 };
+    if (!renderScene(sys, buffers, render, image)) return false;
     if (library.fill_rect(&image, &.{ .x = 1, .y = 2, .width = 5, .height = 3 }, 0x123456) != gfx.status_ok) return false;
     if (buffers.unmap(&write.lease) != ok) return false;
     write.lease = .{};
@@ -109,6 +111,63 @@ fn exercise(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Con
     invalid.plane_pitches[0] = std.math.maxInt(u64) - 3;
     var rejected: a.GfxBufferReference = .{};
     return buffers.create(&invalid, &rejected) == a.gfx_buffer_error_overflow and rejected.reference.id == 0;
+}
+
+fn renderScene(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Context, render: *const gfx.RenderV1Client, target: gfx.R4GfxCpuImage) bool {
+    var caps: gfx.R4GfxRenderCaps = undefined;
+    if (render.capabilities(&caps) != gfx.status_ok or caps.version != 1 or caps.size != @sizeOf(gfx.R4GfxRenderCaps) or
+        caps.backend != gfx.render_backend_software or caps.max_images < 2 or caps.max_commands < 3 or
+        caps.operations & 7 != 7 or caps.samplers & 3 != 3 or caps.features & gfx.render_feature_validate_first == 0) return false;
+    var source: a.GfxBufferReference = .{};
+    if (buffers.create(&.{ .byte_length = 16, .width = 2, .height = 2, .format = a.gfx_buffer_format_argb8888, .plane_count = 1, .plane_pitches = .{ 8, 0, 0, 0 } }, &source) != ok) return false;
+    defer if (source.reference.id != 0) {
+        _ = buffers.release(&source.reference);
+    };
+    var map: a.GfxBufferMap = .{};
+    if (buffers.map(&source.reference, 1, 0, 16, &map) != ok) return false;
+    defer if (map.lease.id != 0) {
+        _ = buffers.unmap(&map.lease);
+    };
+    const pixels: [*]u8 = @ptrFromInt(map.cpu_address);
+    for (0..4) |i| std.mem.writeInt(u32, pixels[i * 4 ..][0..4], 0x80800000, .little);
+    if (buffers.unmap(&map.lease) != ok) return false;
+    map.lease = .{};
+    if (buffers.map(&source.reference, 0, 0, 16, &map) != ok) return false;
+    // The read lease, not the producer reference, holds this image alive.
+    if (buffers.release(&source.reference) != ok) return false;
+    source.reference = .{};
+    const images = [_]gfx.R4GfxCpuImage{ target, .{ .cpu_address = map.cpu_address, .byte_length = map.byte_length, .pitch = 8, .width = 2, .height = 2, .format = gfx.format_argb8888, .reserved = 0 } };
+    const empty = gfx.R4GfxRect{ .x = 0, .y = 0, .width = 0, .height = 0 };
+    var commands = [_]gfx.R4GfxCpuDraw{
+        .{ .operation = gfx.render_operation_fill, .source_index = 0, .target_index = 0, .sampler = 0, .source_rect = empty, .target_rect = .{ .x = 0, .y = 0, .width = 13, .height = 7 }, .color = 0x0000ff, .opacity = 0, .reserved0 = 0, .reserved1 = 0 },
+        .{ .operation = gfx.render_operation_over, .source_index = 1, .target_index = 0, .sampler = gfx.render_sampler_bilinear, .source_rect = .{ .x = 0, .y = 0, .width = 2, .height = 2 }, .target_rect = .{ .x = 0, .y = 0, .width = 4, .height = 4 }, .color = 0, .opacity = 255, .reserved0 = 0, .reserved1 = 0 },
+        .{ .operation = gfx.render_operation_blit, .source_index = 1, .target_index = 0, .sampler = gfx.render_sampler_nearest, .source_rect = .{ .x = 0, .y = 0, .width = 2, .height = 2 }, .target_rect = .{ .x = 6, .y = 0, .width = 4, .height = 4 }, .color = 0, .opacity = 255, .reserved0 = 0, .reserved1 = 0 },
+    };
+    var request = gfx.R4GfxCpuBatch{ .images = @intFromPtr(&images), .commands = @intFromPtr(&commands), .image_count = images.len, .command_count = commands.len, .pixel_budget = 123, .flags = 0, .reserved = 0 };
+    var stats = gfx.R4GfxCpuStats{ .read_bytes = 1, .write_bytes = 2, .pixels = 3, .commands = 4, .reserved = 5 };
+    const untouched = stats;
+    const bytes: [*]const u8 = @ptrFromInt(target.cpu_address);
+    commands[2].target_rect.width = 8;
+    if (render.execute_cpu(&request, &stats) != gfx.status_invalid or !std.meta.eql(untouched, stats) or
+        !std.mem.allEqual(u8, bytes[0..448], 0)) return false;
+    commands[2].target_rect.width = 4;
+    if (render.execute_cpu(&request, &stats) != gfx.status_ok or stats.commands != 3 or stats.pixels != 123 or
+        stats.read_bytes != 384 or stats.write_bytes != 492 or stats.reserved != 0) return false;
+    for (0..7) |y| for (0..16) |x| {
+        const expected: u32 = if (x >= 13) 0 else if (y < 4 and x < 4) 0x80007f else if (y < 4 and x >= 6 and x < 10) 0x800000 else 0x0000ff;
+        if (std.mem.readInt(u32, bytes[y * 64 + x * 4 ..][0..4], .little) != expected) return false;
+    };
+    const source_bytes: [*]const u8 = @ptrFromInt(map.cpu_address);
+    for (0..4) |i| if (std.mem.readInt(u32, source_bytes[i * 4 ..][0..4], .little) != 0x80800000) return false;
+    if (buffers.unmap(&map.lease) != ok) return false;
+    map.lease = .{};
+    commands[0].color = 0;
+    request.command_count = 1;
+    // The source map is gone; do not leave its address in the reset batch.
+    request.image_count = 1;
+    if (render.execute_cpu(&request, &stats) != gfx.status_ok) return false;
+    sys.println("DISPLAYD render: OK backend=software batch=3 pixels=123 read=384 write=492");
+    return true;
 }
 
 fn pageableOutputs(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Context, reference: a.GfxBufferHandle, descriptor: a.GfxBufferDescriptor) bool {

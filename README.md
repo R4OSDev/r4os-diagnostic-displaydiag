@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.11`
+- Version: `0.1.12`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -71,6 +71,14 @@ shared BO imports, concurrent read maps, stale release and exact lifetime
 balance. Four result structures cross from a resident header into an initially
 nonresident page to verify publication outside memory owners. `/BUFFERS
 /DRIVER` also requires this boot's successful EXAMPLE gfx-memory-test marker.
+
+Version 0.1.12 also imports the independent R4GFX `RENDER_V1` table. The same
+`/BUFFERS` entrypoint executes a three-command fill/scaled-blit/source-over
+scene on separate shared BO maps, checks exact colors and logical byte counts,
+rejects an invalid final command without earlier pixel writes, then verifies
+the original `API_V1` path and full resource balance. The source read lease
+survives producer-reference release. Both interfaces come from R4GFX 0.1.1;
+the scene reports `backend=software` and does not submit NVIDIA work.
 
 `/QUEUES` performs two asynchronous 8-MB software-buffer copies linked by an
 explicit fence, releases the producer references early and verifies actual
