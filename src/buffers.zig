@@ -18,10 +18,22 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
         before.leases == after.leases and before.committed_bytes == after.committed_bytes and before.retained_bytes == after.retained_bytes;
     sys.println(if (passed) "DISPLAYD software-buffer: OK" else "DISPLAYD software-buffer: FAILED");
     if (require_driver) {
-        const marker = "EXAMPLE.R4D gfx-memory result: OK bytes=83886080 segments=20480 submission=none";
-        const verified = logContains(&sys, marker);
-        sys.println(if (verified) marker else "DISPLAYD driver-memory: FAILED");
-        passed = passed and verified;
+        for ([_][]const u8{
+            "EXAMPLE.R4D gfx-memory result: OK bytes=83886080 segments=20480 submission=none",
+            "EXAMPLE.R4D gfx-memory work: OK init-import=same-BO query=worker mmio=denied dedicated=denied release=balanced",
+        }) |marker| {
+            const verified = logContains(&sys, marker);
+            sys.println(if (verified) marker else "DISPLAYD driver-memory: FAILED");
+            passed = passed and verified;
+        }
+        const rejected = "EXAMPLE.R4D gfx-memory deliberate init rejection: code=-79 cleanup-probe";
+        if (logContains(&sys, rejected)) {
+            sys.println(rejected);
+            const closed = "EXAMPLE.R4D gfx-memory close: OK admission=closed cached-release=allowed DMA-GPU-CPU=balanced";
+            const verified = logContains(&sys, closed);
+            sys.println(if (verified) closed else "DISPLAYD driver-memory close: FAILED");
+            passed = passed and verified;
+        }
     }
     sys.println(if (passed) "DISPLAYD buffers result: OK library=R4GFX software=shared-BO maps=2 release=balanced" else "DISPLAYD buffers result: FAILED");
     return if (passed) 0 else 1;

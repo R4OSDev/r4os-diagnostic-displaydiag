@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.12`
+- Version: `0.1.13`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -70,7 +70,10 @@ and `NOTICE`. Any repository-specific external material is documented in
 shared BO imports, concurrent read maps, stale release and exact lifetime
 balance. Four result structures cross from a resident header into an initially
 nonresident page to verify publication outside memory owners. `/BUFFERS
-/DRIVER` also requires this boot's successful EXAMPLE gfx-memory-test marker.
+/DRIVER` also requires this boot's successful EXAMPLE gfx-memory-test and
+ordinary-Work markers. If the optional deliberate init rejection is recorded,
+it additionally requires the successful closed-owner cleanup marker. Version
+0.1.13 exports these records for the same existing guest check.
 
 Version 0.1.12 also imports the independent R4GFX `RENDER_V1` table. The same
 `/BUFFERS` entrypoint executes a three-command fill/scaled-blit/source-over
