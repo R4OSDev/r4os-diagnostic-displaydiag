@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.13`
+- Version: `0.1.14`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -132,3 +132,10 @@ complete replay. The reader retains its existing 64-KB boot-log bound.
 It does not probe PCI/MMIO or infer native GPU, connector or HDMI audio
 support from a PCI name. Missing records are reported as unavailable.
 The passive NVIDIA owner and physical hardware acceptances remain separate.
+
+Queue resource handoff (0.79.11): the existing explicit queue fixture now
+checks the legacy 56-byte canary, mapping-only BO references from ordinary
+Work after producer exit, exact offset/DMA correspondence, retained device
+leases and balanced release after the timer IRQ. No GPU commands run.
+DISPLAYD exports these records; the focused SMP4 run injects one key and
+uses no guest networking. Evidence: Docs/Drivers/GrafikSpeicher07911.json.

@@ -34,7 +34,7 @@ pub fn run(app: *r4os.App, native: bool) i32 {
     if (buffers.stats(&before) != ok) return 1;
     var passed = software(&sys, &buffers, &queues);
     if (native and passed) passed = driver(&sys, &buffers, &queues);
-    if (native and passed) passed = killedProducer(&sys, &queues);
+    if (native and passed) passed = killedProducer(&sys, &queues, &buffers, before.retained_bytes);
     passed = buffers.stats(&after) == ok and passed;
     passed = passed and before.objects == after.objects and before.references == after.references and before.leases == after.leases and before.committed_bytes == after.committed_bytes;
     sys.println(if (passed) "DISPLAYD queues result: OK resources=balanced" else "DISPLAYD queues result: FAILED");
@@ -102,7 +102,7 @@ fn childBlocked(sys: *const r4os.r4sys.Context, child_handle: a.ProgramProcessHa
     }
     return false;
 }
-fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue.Context) bool {
+fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue.Context, buffers: *const r4os.gfx_buffers.Context, retained_before: u64) bool {
     var handle: a.ProgramProcessHandle = .{};
     if (sys.programSpawnWithConsoleHostHandle(child_path, "/QUEUECHILD", .console, .terminal_window, &handle) != a.program_handle_ok) return fail(sys, @src().line);
     defer if (handle.instance_id != 0) {
@@ -137,12 +137,31 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
         sys.programHandleReap(&handle, &completion) != a.program_handle_ok) return fail(sys, @src().line);
     handle = .{};
     if (context.query(&fence.?, &status) != ok or status.result != a.gfx_queue_result_cancelled or status.flags != 3) return fail(sys, @src().line);
+    sys.println("DISPLAYD queues kill: producer=reaped before-IRQ");
     var code: i32 = -1;
     if (sys.threadHandleJoin(&thread, sys.ticksFromMilliseconds(5000), &code) != a.thread_ok or code != 0) return fail(sys, @src().line);
     const retired = sys.ticks();
     while (sys.ticks() - retired < sys.ticksFromMilliseconds(1000)) {
         const rc = context.query(&fence.?, &status);
         if (rc == a.gfx_queue_error_stale) {
+            // Queue retirement and the ordinary mapping worker are separate
+            // completions. Require the driver's post-exit handoff and final
+            // release before accepting the common BO accounting baseline.
+            const memory_marker = "EXAMPLE.R4D gfx-queue retained: OK producer=closed work=ordinary same-BO=2 extents=exact maps=4";
+            while (!@import("buffers.zig").logContains(sys, memory_marker)) {
+                if (sys.ticks() - retired >= sys.ticksFromMilliseconds(1000)) return fail(sys, @src().line);
+                sys.sleepTicks(1);
+            }
+            sys.println(memory_marker);
+            // The second mapping cleanup may still be running; resources
+            // released by queue retirement alone are not sufficient proof.
+            var stats: a.GfxBufferStats = .{};
+            while (true) {
+                if (buffers.stats(&stats) != ok) return fail(sys, @src().line);
+                if (stats.retained_bytes == retained_before) break;
+                if (sys.ticks() - retired >= sys.ticksFromMilliseconds(1000)) return fail(sys, @src().line);
+                sys.sleepTicks(1);
+            }
             sys.println("DISPLAYD queues kill: OK blocked-tasks=3 producer=reaped DMA=retained-until-IRQ fence=retired");
             return true;
         }
@@ -224,7 +243,7 @@ fn driver(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Conte
     };
     for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4096, .usage = 15 }, ref) != ok) return fail(sys, @src().line);
     var status: a.GfxFenceStatus = .{};
-    if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .bytes = 4096, .deadline_ns = deadline(sys) }, &status) != ok) return fail(sys, @src().line);
+    if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .source_offset = 3, .target_offset = 5, .bytes = 4079, .deadline_ns = deadline(sys) }, &status) != ok) return fail(sys, @src().line);
     const start = sys.ticks();
     while ((status.flags & a.gfx_queue_flag_device_active) == 0 and sys.ticks() - start < sys.ticksFromMilliseconds(1000)) {
         sys.sleepTicks(1);
@@ -269,6 +288,9 @@ fn driver(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Conte
     if (context.release(&reset.fence) != ok) return fail(sys, @src().line);
     sys.println("DISPLAYD queues reset: OK device-lost=distinct generations=exact");
     for ([_][]const u8{
+        "EXAMPLE.R4D gfx-queue prefix: OK bytes=56 canary=preserved",
+        "EXAMPLE.R4D gfx-queue retained: OK work=ordinary same-BO=2 extents=exact maps=4",
+        "EXAMPLE.R4D gfx-queue mapping release: OK IRQ=observed DMA-GPU-reference=balanced",
         "EXAMPLE.R4D gfx-queue IRQ: OK late=exact duplicate=rejected unproven=retained",
         "EXAMPLE.R4D gfx-queue reset: OK lost=published old-generation=retained quiescence=required",
     }) |marker| {
