@@ -53,9 +53,9 @@ pub fn child(app: *r4os.App) i32 {
     if (queue.open(config(binding)) != ok) return 1;
     // This fixture deliberately leaves all caller handles to process cleanup.
     var refs: [2]a.GfxBufferReference = .{a.GfxBufferReference{}} ** 2;
-    for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4096, .usage = 15 }, ref) != ok) return 1;
+    for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4091, .usage = 15 }, ref) != ok) return 1;
     var status: a.GfxFenceStatus = .{};
-    if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .bytes = 4096, .deadline_ns = deadline(&sys) }, &status) != ok) return 1;
+    if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .source_offset = 3, .target_offset = 5, .bytes = 4079, .deadline_ns = deadline(&sys) }, &status) != ok) return 1;
     for (&waits) |*waiter| {
         waiter.* = .{ .context = context, .fence = status.fence, .timeout = sys.ticksFromMilliseconds(5000) };
         var thread: a.ProgramJoinHandle = .{};
@@ -241,7 +241,7 @@ fn driver(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Conte
     defer for (refs) |ref| if (ref.reference.id != 0) {
         _ = buffers.release(&ref.reference);
     };
-    for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4096, .usage = 15 }, ref) != ok) return fail(sys, @src().line);
+    for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4091, .usage = 15 }, ref) != ok) return fail(sys, @src().line);
     var status: a.GfxFenceStatus = .{};
     if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .source_offset = 3, .target_offset = 5, .bytes = 4079, .deadline_ns = deadline(sys) }, &status) != ok) return fail(sys, @src().line);
     const start = sys.ticks();
@@ -253,7 +253,8 @@ fn driver(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Conte
     if (context.wait(&status.fence, 0, a.gfx_queue_wait_completion, &status) != ok or status.result != a.gfx_queue_result_cancelled or status.flags != 3) return fail(sys, @src().line);
     const completed_ns = status.completed_ns;
     var denied: a.GfxBufferMap = .{};
-    if (buffers.map(&refs[1].reference, 1, 0, 4096, &denied) != a.gfx_buffer_error_busy) return fail(sys, @src().line);
+    if (buffers.map(&refs[1].reference, 1, 0, 4096, &denied) != a.gfx_buffer_error_invalid or
+        buffers.map(&refs[1].reference, 1, 0, 4091, &denied) != a.gfx_buffer_error_busy) return fail(sys, @src().line);
     for (&refs) |*ref| {
         if (buffers.release(&ref.reference) != ok) return fail(sys, @src().line);
         ref.reference = .{};
