@@ -13,11 +13,54 @@ fn check(sys: *const r4os.r4sys.Context, condition: bool, line: u32) bool {
     return false;
 }
 fn find(ctx: *const r4os.gfx_outputs.Context, adapter: u32) ?a.GfxOutputInfo {
-    for (0..a.gfx_output_capacity) |index| {
+    for (0..a.gfx_output_catalog_capacity) |index| {
         var info: a.GfxOutputInfo = .{};
         if (ctx.info(@intCast(index), &info) == ok and info.identity.adapter_id == adapter) return info;
     }
     return null;
+}
+pub fn inventory(app: *r4os.App) i32 {
+    const sys = app.system();
+    const draw = app.drawing() orelse return a.err_no_group;
+    const ctx = draw.outputs();
+    var before: a.GfxDisplayRevision = .{};
+    if (ctx.revision(&before) != ok or before.present > a.gfx_output_catalog_capacity) return 1;
+    sys.write("DISPLAYD receivers: revision="); sys.printU64(before.revision);
+    sys.write(" count="); sys.printU64(before.present); sys.println("");
+    for (0..before.present) |index| {
+        var info: a.GfxOutputInfo = .{};
+        if (ctx.info(@intCast(index), &info) != ok or info.topology_revision != before.revision) return catalogChanged(&sys);
+        sys.write("  adapter="); sys.printU64(info.identity.adapter_id);
+        sys.write(" port="); sys.printU64(info.identity.connector_id);
+        sys.write(" device-generation="); sys.printU64(info.identity.device_generation);
+        sys.write(" receiver-generation="); sys.printU64(info.identity.connection_generation);
+        sys.write(" kind="); sys.printU64(info.connector_kind);
+        sys.write(" flags="); sys.printU64(info.flags);
+        sys.write(" source="); sys.write(if (info.flags & a.gfx_output_flag_receiver_only != 0) "receiver-only" else if (info.flags & a.gfx_output_flag_firmware_snapshot != 0) "firmware-snapshot" else "driver");
+        sys.write(" modes="); sys.printU64(info.mode_count);
+        sys.write(" edid-bytes="); sys.printU64(info.edid_bytes); sys.println("");
+        if (info.edid_bytes == 0) { sys.println("    EDID unavailable; receiver power state unknown"); continue; }
+        gfx.readReceiver(&ctx, &info, &raw, &receiver) catch |err| {
+            if (err == error.Stale) return catalogChanged(&sys);
+            sys.write("    EDID status="); sys.println(@errorName(err));
+            continue;
+        };
+        sys.write("    EDID vendor="); sys.write(&receiver.manufacturer);
+        sys.write(" name="); sys.write(std.mem.sliceTo(&receiver.name, 0));
+        sys.write(" extensions="); sys.printU64(receiver.valid_extensions); sys.putc('/'); sys.printU64(receiver.declared_extensions);
+        sys.write(" warnings="); sys.printU64(receiver.warnings);
+        sys.write(" colors="); sys.printU64(receiver.colors);
+        sys.write(" audio-formats="); sys.printU64(receiver.audio_count);
+        sys.write(" basic-audio="); sys.printU64(@intFromBool(receiver.basic_audio)); sys.println("");
+    }
+    var after: a.GfxDisplayRevision = .{};
+    if (ctx.revision(&after) != ok or after.revision != before.revision) return catalogChanged(&sys);
+    sys.println("DISPLAYD receivers: complete hardware-writes=none");
+    return 0;
+}
+fn catalogChanged(sys: *const r4os.r4sys.Context) i32 {
+    sys.println("DISPLAYD receivers: catalog changed; repeat the complete read");
+    return 2;
 }
 pub fn run(app: *r4os.App, native: bool) i32 {
     const sys = app.system();

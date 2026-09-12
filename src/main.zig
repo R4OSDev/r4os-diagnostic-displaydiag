@@ -304,6 +304,7 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
     if (std.ascii.eqlIgnoreCase(args, "/VIRTIO /TEST")) return @import("virtio.zig").exercise(r4_app, false, false);
     if (std.ascii.eqlIgnoreCase(args, "/VIRTIO /RESIZE")) return @import("virtio.zig").exercise(r4_app, false, true);
     if (std.ascii.eqlIgnoreCase(args, "/VIRTIO /FAIL")) return @import("virtio.zig").exercise(r4_app, true, false);
+    if (std.ascii.eqlIgnoreCase(args, "/RECEIVERS")) return @import("outputs.zig").inventory(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/OUTPUTS") or std.ascii.eqlIgnoreCase(args, "/OUTPUTS /DRIVER")) {
         return @import("outputs.zig").run(r4_app, args.len > 8);
     }

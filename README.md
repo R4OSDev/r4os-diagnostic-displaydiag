@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.10`
+- Version: `0.1.11`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -83,6 +83,13 @@ fixture and intentionally leaves handles to process cleanup. These modes
 do not perform GPU DMA, visible presentation or HDMI-audio tests. The SMP4
 acceptance additionally injects the `g` key and verifies SSH progress while
 the first driver resource wait is pending.
+
+`/RECEIVERS` reads the shared R4DRAW catalog, generation identities and receiver
+status, then uses the common R4GFX EDID parser for monitor name, extension
+counts, colors and audio facts. Receiver-only entries have no source/modeset
+qualification. A changing catalog requests a fresh complete read; missing EDID
+does not identify the monitor power state. This command never submits a frame
+or performs PCI, DDC or GPU accesses.
 
 `/OUTPUTS` checks the fixed firmware connector, exact boot geometry and
 EDID availability, rejects invalid composite state without device changes,
