@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.15`
+- Version: `0.1.16`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -144,3 +144,8 @@ uses no guest networking. Evidence: Docs/Drivers/GrafikSpeicher07911.json.
 and 4079-byte offset jobs, while mapping-only references retain full 4096-byte
 DMA/GPU pages. Focused SMP4 passes; evidence: native_buffer_checkpoint
 in Docs/Drivers/GrafikSpeicher07911.json.
+
+0.79.11 owned backing: the existing memory fixture checks the preserved
+112-byte R4D prefix, native reservations/tickets and independent system
+collection through real Init/Work/closing Shutdown. Synthetic backing only;
+focused SMP4 passes. Evidence: owned_vram_checkpoint in GrafikSpeicher07911.json.

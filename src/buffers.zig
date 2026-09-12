@@ -21,6 +21,8 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
         for ([_][]const u8{
             "EXAMPLE.R4D gfx-memory result: OK bytes=83886080 segments=20480 submission=none",
             "EXAMPLE.R4D gfx-memory work: OK init-import=same-BO query=worker mmio=denied dedicated=denied release=balanced",
+            "EXAMPLE.R4D gfx-owned init: OK prefix=112 canary=preserved exact-tickets=balanced",
+            "EXAMPLE.R4D gfx-owned work: OK imported-and-GPU=retained system-collect=independent",
         }) |marker| {
             const verified = logContains(&sys, marker);
             sys.println(if (verified) marker else "DISPLAYD driver-memory: FAILED");
@@ -33,6 +35,10 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
             const verified = logContains(&sys, closed);
             sys.println(if (verified) closed else "DISPLAYD driver-memory close: FAILED");
             passed = passed and verified;
+            const native_closed = "EXAMPLE.R4D gfx-owned close: OK admission=closed abort-and-retire=balanced";
+            const native_verified = logContains(&sys, native_closed);
+            sys.println(if (native_verified) native_closed else "DISPLAYD driver-memory close: FAILED");
+            passed = passed and native_verified;
         }
     }
     sys.println(if (passed) "DISPLAYD buffers result: OK library=R4GFX software=shared-BO maps=2 release=balanced" else "DISPLAYD buffers result: FAILED");
