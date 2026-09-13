@@ -121,6 +121,17 @@ const App = struct {
         self.sys.write("x");
         self.sys.printU64(value.boot_height);
         self.sys.println("");
+        var mode: r4os.abi.GfxModeStatus = .{};
+        if (self.draw.outputs().status(0, &mode) == r4os.abi.gfx_output_ok and mode.ticket != 0) {
+            self.sys.write("  mode ticket="); self.sys.printU64(mode.ticket);
+            self.sys.write(" phase="); self.sys.printU64(mode.phase);
+            self.sys.write(" outcome="); self.sys.printU64(mode.outcome);
+            self.sys.write(" retained="); self.sys.printU64(mode.retained);
+            self.sys.write(" error="); self.sys.printI32(mode.error_code);
+            self.sys.write(" confirmation-deadline-ns="); self.sys.printU64(mode.confirmation_deadline_ns);
+            self.sys.write(" operation-deadline-ns="); self.sys.printU64(mode.operation_deadline_ns);
+            self.sys.println("");
+        }
         return if (ok) 0 else 1;
     }
 
@@ -305,6 +316,7 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
     if (std.ascii.eqlIgnoreCase(args, "/VIRTIO /RESIZE")) return @import("virtio.zig").exercise(r4_app, false, true);
     if (std.ascii.eqlIgnoreCase(args, "/VIRTIO /FAIL")) return @import("virtio.zig").exercise(r4_app, true, false);
     if (std.ascii.eqlIgnoreCase(args, "/RECEIVERS")) return @import("outputs.zig").inventory(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/OUTPUTS /MODETEST")) return @import("modes.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/OUTPUTS") or std.ascii.eqlIgnoreCase(args, "/OUTPUTS /DRIVER")) {
         return @import("outputs.zig").run(r4_app, args.len > 8);
     }
