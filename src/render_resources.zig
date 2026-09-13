@@ -137,5 +137,5 @@ fn exercise(sys: *const r4os.r4sys.Context, client: *const gfx.DeviceV1Client, d
     sys.write("DISPLAYD resources: OK DEVICE_V1 backend="); sys.printU64(state.backend);
     sys.write(" copy-bytes=48 completed=2 dependencies=1 pitches=16/24/32 pixels=16 cpu-read="); sys.printU64(state.cpu_read_bytes);
     sys.write(" cpu-write="); sys.printU64(state.cpu_write_bytes); sys.println(" upload=0");
-    return true;
+    return @import("image_preparation.zig").run(sys,client,device,source,readback,blit,sampler,&pixels);
 }
