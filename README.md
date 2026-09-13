@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.18`
+- Version: `0.1.22`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -168,3 +168,11 @@ bytes. backend1 is the common CPU queue; backend2 denotes actual native queue
 completion. This small diagnostic allocates its BOs in system RAM; it does not
 by itself qualify native VRAM layouts. Driver models and physical follow-up are
 documented in Docs/Drivers/GrafikCopy07918.txt/.json and OssiGPU.txt /18.
+
+The same `/BUFFERS` entrypoint optionally loads R4NV `SHADER_V1` and checks
+one actual compiled SM86 fragment program through its byte-cache interface.
+A synthetic device identity allows this software boundary check on any host:
+changed driver identity and damaged code must return cache misses before the
+original entry returns its header/code ranges. `software-cache` identifies
+this result; no NVIDIA commands or GPU pixels are involved. A missing optional
+shader interface reports `unavailable` and preserves the other diagnostics.

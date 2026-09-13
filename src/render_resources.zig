@@ -2,8 +2,10 @@
 const std = @import("std");
 const r4os = @import("r4os");
 const gfx = @import("r4gfx");
+const nv = @import("r4nv");
 
 pub fn run(app: *r4os.App) bool {
+    if (!shaderCache(app)) return false;
     const client = gfx.DeviceV1Client.init(app.startContext()) catch return false;
     const sys = app.system();
     const allocator = sys.allocator();
@@ -19,6 +21,42 @@ pub fn run(app: *r4os.App) bool {
     const closed = client.device_close(&device) == gfx.status_ok;
     if (closed) allocator.free(storage); // A retained receipt must outlive a failed close.
     return passed and closed;
+}
+fn shaderCache(app: *r4os.App) bool {
+    const sys = app.system();
+    const client = nv.ShaderV1Client.init(app.startContext()) catch {
+        sys.println("DISPLAYD shaders: unavailable");
+        return true;
+    };
+    // Synthetic identity exercises the R4L boundary on any machine. It is
+    // never supplied to a renderer and does not advertise NVIDIA capability.
+    var key: nv.R4NvShaderKey = .{ .version = 1, .size = @sizeOf(nv.R4NvShaderKey), .vendor_id = 0x10de, .device_id = 0x2484,
+        .graphics_class = nv.shader_graphics_class_ampere_b, .shader_model = nv.shader_model_sm86,
+        .rm_release = nv.rm_release, .command_abi = nv.command_abi, .shader_abi = nv.shader_abi, .resource_abi = nv.shader_resource_abi,
+        .input_format = gfx.format_argb8888, .output_format = gfx.format_xrgb8888, .driver_build = 0x100000002,
+        .device_uuid = .{ .word0 = 1, .word1 = 2, .word2 = 3, .word3 = 4 },
+        .pipeline_state = .{ .word0 = 5, .word1 = 6, .word2 = 7, .word3 = 8 } };
+    var storage: [nv.shader_cache_max_bytes + 1]u8 = undefined;
+    const bytes = storage[1..];
+    var written: u32 = 0;
+    var info: nv.R4NvShaderInfo = undefined;
+    var view: nv.R4NvShaderView = std.mem.zeroes(nv.R4NvShaderView);
+    const profile = nv.shader_profile_texture_fragment;
+    if (client.shader_info(profile, &info) != nv.status_ok or info.stage != 4 or info.shader_model != 86 or info.header_bytes != 128 or
+        client.shader_cache_write(profile, &key, bytes.ptr, bytes.len, &written) != nv.status_ok or written > bytes.len or
+        written != nv.shader_cache_header_bytes + info.code_bytes) return false;
+    key.driver_build += 1;
+    if (client.shader_cache_read(&key, bytes.ptr, written, &view) != nv.status_cache_miss or view.code_address != 0) return false;
+    key.driver_build -= 1;
+    bytes[written - 1] ^= 1;
+    if (client.shader_cache_read(&key, bytes.ptr, written, &view) != nv.status_cache_miss or view.code_address != 0) return false;
+    bytes[written - 1] ^= 1;
+    if (client.shader_cache_read(&key, bytes.ptr, written, &view) != nv.status_ok or view.info.profile != profile or
+        view.info.code_bytes != info.code_bytes or view.header_address != @intFromPtr(bytes.ptr) + 224 or
+        view.code_address != @intFromPtr(bytes.ptr) + nv.shader_cache_header_bytes) return false;
+    sys.write("DISPLAYD shaders: OK SHADER_V1 software-cache code-bytes="); sys.printU64(info.code_bytes);
+    sys.println(" stale=miss corrupt=miss");
+    return true;
 }
 fn description(kind: u32) gfx.R4GfxResourceDesc {
     var value = std.mem.zeroes(gfx.R4GfxResourceDesc);
