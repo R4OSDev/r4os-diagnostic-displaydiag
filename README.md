@@ -4,13 +4,19 @@
 
 ## Package
 
-- Version: `0.1.22`
+- Version: `0.1.23`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
+
+With the explicit EXAMPLE `gfx-allocation-test` fixture, `/BUFFERS` also checks
+native request dispatch/wait, canonical BO transfer/import/release, stale
+memory generations and unchanged failure outputs. The provider has synthetic
+backing and never executes GPU work. Without that fixture the normal check
+retains its software scope.
 
 ## Build
 

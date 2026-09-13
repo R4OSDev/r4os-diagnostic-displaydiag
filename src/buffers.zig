@@ -14,6 +14,7 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
     var after: a.GfxBufferStats = .{};
     var passed = buffers.stats(&before) == ok and exercise(&sys, &buffers, &library, &render);
     passed = passed and @import("render_resources.zig").run(app);
+    passed = passed and @import("native_allocation.zig").run(app);
     passed = buffers.stats(&after) == ok and passed;
     passed = passed and before.objects == after.objects and before.references == after.references and
         before.leases == after.leases and before.committed_bytes == after.committed_bytes and before.retained_bytes == after.retained_bytes;

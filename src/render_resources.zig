@@ -6,8 +6,11 @@ const nv = @import("r4nv");
 
 pub fn run(app: *r4os.App) bool {
     if (!shaderCache(app)) return false;
-    const client = gfx.DeviceV1Client.init(app.startContext()) catch return false;
     const sys = app.system();
+    const client = gfx.DeviceV1Client.init(app.startContext()) catch |err| {
+        sys.write("DISPLAYD resources: unavailable reason="); sys.println(@errorName(err));
+        return false;
+    };
     const allocator = sys.allocator();
     const bytes = client.storage_size();
     if (bytes == 0 or bytes > std.math.maxInt(usize)) return false;
