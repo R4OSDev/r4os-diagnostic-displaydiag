@@ -9,7 +9,7 @@ pub fn run(app: *r4os.App) bool {
     const buffers = (app.drawing() orelse return false).buffers();
     const passed = exercise(&sys, &buffers);
     sys.println(if (passed) "DISPLAYD native-allocation: OK driver-work wait transfer stale=denied failed-output=unchanged synthetic-no-GPU" else "DISPLAYD native-allocation: FAILED");
-    return passed;
+    return passed and @import("native_render.zig").run(app);
 }
 fn exercise(sys: *const r4os.r4sys.Context, memory: *const r4os.gfx_buffers.Context) bool {
     const deadline = (sys.monotonicNanoseconds() orelse return false) + 3_000_000_000;
