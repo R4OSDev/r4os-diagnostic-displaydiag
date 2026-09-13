@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.16`
+- Version: `0.1.18`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -35,6 +35,16 @@ It does not present a frame or probe hardware. Older kernels without the
 optional R4DEV slot report it as unavailable. The normal smoke also accepts
 CPU presentation onto native scanout (`native-cpu`); GPU completion is not
 implied.
+
+`DISPLAYD /STATS [head-id]` reads one coherent native presentation snapshot
+(default head 0), without submitting a frame. Acquire/render, Window submit,
+visible activation and old-image release have separate counters. The latest
+visible receipt includes its source queue fence, CE/Window points, raw GPU
+timestamp and monotonic CPU observation times. These are independent of CPU
+presentation fences; `released` counts completed scanout uses, not freed
+allocations. Missing native reports are unavailable, including on bootfb.
+The optional R4DRAW slot requires Kernel 0.1.162 or later; an older kernel
+leaves the rest of DISPLAYD usable.
 
 `DISPLAYD /BASELINE` runs bounded CPU reference scenes in RAM. Add `/PRESENT`
 to submit diagnostic images to the active screen, `/SAMPLES=1..64` to select
