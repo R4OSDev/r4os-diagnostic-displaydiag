@@ -159,3 +159,12 @@ in Docs/Drivers/GrafikSpeicher07911.json.
 112-byte R4D prefix, native reservations/tickets and independent system
 collection through real Init/Work/closing Shutdown. Synthetic backing only;
 focused SMP4 passes. Evidence: owned_vram_checkpoint in GrafikSpeicher07911.json.
+
+DEVICE_V1 revision2 in /BUFFERS queues two dependent row copies before waiting
+for the final job. Source/target/staging use pitches16/24/32; six pixels are
+copied through each hop, untouched pixels remain zero and the complete16-pixel
+readback is checked. `copy-bytes=48 completed=2 dependencies=1` reports logical
+bytes. backend1 is the common CPU queue; backend2 denotes actual native queue
+completion. This small diagnostic allocates its BOs in system RAM; it does not
+by itself qualify native VRAM layouts. Driver models and physical follow-up are
+documented in Docs/Drivers/GrafikCopy07918.txt/.json and OssiGPU.txt /18.

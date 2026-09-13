@@ -28,6 +28,7 @@ fn description(kind: u32) gfx.R4GfxResourceDesc {
 fn exercise(sys: *const r4os.r4sys.Context, client: *const gfx.DeviceV1Client, device: *const gfx.R4GfxDevice) bool {
     var source: gfx.R4GfxResource = undefined;
     var target: gfx.R4GfxResource = undefined;
+    var staging: gfx.R4GfxResource = undefined;
     var readback: gfx.R4GfxResource = undefined;
     var fill: gfx.R4GfxResource = undefined;
     var blit: gfx.R4GfxResource = undefined;
@@ -35,8 +36,13 @@ fn exercise(sys: *const r4os.r4sys.Context, client: *const gfx.DeviceV1Client, d
     var image = description(gfx.resource_image);
     image.flags = gfx.image_target;
     image.image = .{ .cpu_address = 0, .byte_length = 64, .pitch = 16, .width = 4, .height = 4, .format = gfx.format_xrgb8888, .reserved = 0 };
-    if (client.resource_create(device, &image, &source) != gfx.status_ok or client.resource_create(device, &image, &target) != gfx.status_ok) return false;
+    if (client.resource_create(device, &image, &source) != gfx.status_ok) return false;
+    image.image.pitch = 24; image.image.byte_length = 96;
+    if (client.resource_create(device, &image, &target) != gfx.status_ok) return false;
+    image.image.pitch = 32; image.image.byte_length = 128;
+    if (client.resource_create(device, &image, &staging) != gfx.status_ok) return false;
     var pixels: [16]u32 = @splat(0);
+    image.image.pitch = 16; image.image.byte_length = 64;
     image.source_kind = gfx.source_borrow_cpu; image.source_generation = 1; image.image.cpu_address = @intFromPtr(&pixels);
     if (client.resource_create(device, &image, &readback) != gfx.status_ok) return false;
     var pipeline = description(gfx.resource_pipeline); pipeline.operation = gfx.render_operation_fill;
@@ -51,27 +57,44 @@ fn exercise(sys: *const r4os.r4sys.Context, client: *const gfx.DeviceV1Client, d
     const batch: gfx.R4GfxRenderBatch = .{ .commands = @intFromPtr(&command), .command_count = 1, .flags = 0, .pixel_budget = 16 };
     var stats: gfx.R4GfxRenderStats = undefined;
     if (client.render(device, &batch, &stats) != gfx.status_ok or stats.cpu.write_bytes != 64) return false;
+    command.color = 0;
+    command.target = target;
+    if (client.render(device, &batch, &stats) != gfx.status_ok) return false;
+    command.target = staging;
+    if (client.render(device, &batch, &stats) != gfx.status_ok) return false;
     const deadline = (sys.monotonicNanoseconds() orelse return false) + 3_000_000_000;
     var job: gfx.R4GfxJob = undefined;
-    if (client.copy_submit(device, &.{ .source = source, .target = target, .source_offset = 0, .target_offset = 0,
-        .byte_length = 64, .deadline_ns = deadline }, &job) != gfx.status_ok) return false;
+    if (client.copy_submit_ex(device, &.{ .version = 1, .size = @sizeOf(gfx.R4GfxCopyRequestEx),
+        .copy = .{ .source = source, .target = target, .source_offset = 20, .target_offset = 8, .byte_length = 8, .deadline_ns = deadline },
+        .row_count = 3, .dependency_count = 0, .source_pitch = 16, .target_pitch = 24, .dependencies = 0 }, &job) != gfx.status_ok) return false;
+    var upstream: gfx.R4GfxCopyFence = undefined;
+    if (client.job_fence(device, &job, &upstream) != gfx.status_ok) return false;
+    var dependent: gfx.R4GfxJob = undefined;
+    if (client.copy_submit_ex(device, &.{ .version = 1, .size = @sizeOf(gfx.R4GfxCopyRequestEx),
+        .copy = .{ .source = target, .target = staging, .source_offset = 8, .target_offset = 32, .byte_length = 8, .deadline_ns = deadline },
+        .row_count = 3, .dependency_count = 1, .source_pitch = 24, .target_pitch = 32, .dependencies = @intFromPtr(&upstream) }, &dependent) != gfx.status_ok) return false;
+    // Both jobs have been admitted. Only the final result is awaited; the
+    // canonical queue retains the upstream fence and orders memory access.
     var receipt: gfx.R4GfxJobInfo = undefined;
     while (true) {
-        if (client.job_info(device, &job, &receipt) != gfx.status_ok) return false;
+        if (client.job_info(device, &dependent, &receipt) != gfx.status_ok) return false;
         if (receipt.phase == r4os.abi.gfx_queue_phase_terminal and receipt.flags == 0) break;
         if ((sys.monotonicNanoseconds() orelse return false) >= deadline) return false;
         sys.sleepTicks(1);
     }
-    if (receipt.result != r4os.abi.gfx_queue_result_complete or client.job_release(device, &job) != gfx.status_ok) return false;
-    command.target = readback; command.source = target; command.pipeline = blit; command.sampler = sampler;
+    if (receipt.result != r4os.abi.gfx_queue_result_complete or client.job_release(device, &dependent) != gfx.status_ok) return false;
+    var first: gfx.R4GfxJobInfo = undefined;
+    if (client.job_info(device, &job, &first) != gfx.status_ok or first.result != r4os.abi.gfx_queue_result_complete or
+        first.flags != 0 or client.job_release(device, &job) != gfx.status_ok) return false;
+    command.target = readback; command.source = staging; command.pipeline = blit; command.sampler = sampler;
     command.source_rect = command.target_rect; command.color = 0; command.opacity = 255;
     if (client.render(device, &batch, &stats) != gfx.status_ok) return false;
-    for (pixels) |pixel| if (pixel != 0x2468ac) return false;
+    for (pixels, 0..) |pixel, i| if (pixel != @as(u32, if (i / 4 >= 1 and i % 4 < 2) 0x2468ac else 0)) return false;
     var state: gfx.R4GfxDeviceInfo = undefined;
     if (client.device_info(device, &state) != gfx.status_ok or state.upload_bytes != 0 or
-        state.gpu_copy_bytes != @as(u64, if (receipt.backend == gfx.render_backend_nvidia) 64 else 0)) return false;
+        state.gpu_copy_bytes != @as(u64, if (receipt.backend == gfx.render_backend_nvidia) 48 else 0)) return false;
     sys.write("DISPLAYD resources: OK DEVICE_V1 backend="); sys.printU64(state.backend);
-    sys.write(" copy-bytes=64 completed=1 pixels=16 cpu-read="); sys.printU64(state.cpu_read_bytes);
+    sys.write(" copy-bytes=48 completed=2 dependencies=1 pitches=16/24/32 pixels=16 cpu-read="); sys.printU64(state.cpu_read_bytes);
     sys.write(" cpu-write="); sys.printU64(state.cpu_write_bytes); sys.println(" upload=0");
     return true;
 }
