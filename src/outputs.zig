@@ -34,7 +34,11 @@ pub fn inventory(app: *r4os.App) i32 {
         sys.write(" port="); sys.printU64(info.identity.connector_id);
         sys.write(" device-generation="); sys.printU64(info.identity.device_generation);
         sys.write(" receiver-generation="); sys.printU64(info.identity.connection_generation);
-        sys.write(" kind="); sys.printU64(info.connector_kind);
+        sys.write(" kind="); sys.write(switch (info.connector_kind) {
+            a.gfx_output_kind_hdmi => "HDMI", a.gfx_output_kind_displayport => "DisplayPort",
+            a.gfx_output_kind_edp => "eDP", a.gfx_output_kind_dvi => "DVI",
+            a.gfx_output_kind_virtual => "virtual", a.gfx_output_kind_firmware => "firmware", else => "unknown",
+        });
         sys.write(" flags="); sys.printU64(info.flags);
         sys.write(" source="); sys.write(if (info.flags & a.gfx_output_flag_receiver_only != 0) "receiver-only" else if (info.flags & a.gfx_output_flag_firmware_snapshot != 0) "firmware-snapshot" else "driver");
         sys.write(" modes="); sys.printU64(info.mode_count);
