@@ -10,6 +10,22 @@ pub fn run(app: *r4os.App, args: []const u8) i32 {
     const head: u32 = if (tail.len == 0) 0 else std.fmt.parseInt(u32, tail, 10) catch {
         sys.println("DISPLAYD /STATS [head-id]"); return a.gfx_output_error_invalid;
     };
+    if (draw.supportsDisplayPresentationInfo()) {
+        var info: a.DisplayPresentationInfo = .{};
+        if (draw.displayPresentationInfo(head, &info) == a.gfx_output_ok) {
+            sys.write("DISPLAYD presentation capabilities: head="); sys.printU64(head);
+            sys.write(" path="); sys.printU64(info.path); sys.write(" buffers="); sys.printU64(info.buffer_count);
+            sys.write(" planes="); sys.printU64(info.plane_count); sys.write(" policies="); sys.printU64(info.policies);
+            sys.write(" vsync="); sys.printU64(@intFromBool(info.flags & a.display_presentation_info_synchronized != 0));
+            sys.write(" visibility="); sys.printU64(@intFromBool(info.flags & a.display_presentation_info_visibility != 0));
+            sys.write(" direct="); sys.printU64(@intFromBool(info.flags & a.display_presentation_info_direct != 0));
+            sys.write(" overlay="); sys.printU64(@intFromBool(info.flags & a.display_presentation_info_overlay != 0));
+            sys.println("");
+            sys.write("  interval-ns="); sys.printU64(info.interval_ns); sys.write(" phase-observed-ns="); sys.printU64(info.observed_ns);
+            sys.write(" observation="); sys.printU64(info.observed_sequence); sys.println("");
+            sys.println("  paths:0=CPU-copy 1=composition-copy+flip 2=direct 3=overlay; policies:1=FIFO 2=latest-ready 4=immediate");
+        }
+    }
     if (!draw.supportsDisplayPresentationStats()) {
         sys.println("DISPLAYD presentation: unavailable (R4DRAW slot required)"); return a.err_no_fn;
     }
