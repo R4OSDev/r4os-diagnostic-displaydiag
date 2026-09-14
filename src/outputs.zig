@@ -43,6 +43,21 @@ pub fn inventory(app: *r4os.App) i32 {
         sys.write(" source="); sys.write(if (info.flags & a.gfx_output_flag_receiver_only != 0) "receiver-only" else if (info.flags & a.gfx_output_flag_firmware_snapshot != 0) "firmware-snapshot" else "driver");
         sys.write(" modes="); sys.printU64(info.mode_count);
         sys.write(" edid-bytes="); sys.printU64(info.edid_bytes); sys.println("");
+        var color: a.GfxOutputColorState = .{};
+        const color_rc = ctx.color(&info.identity, &color);
+        if (color_rc == a.gfx_output_error_stale) return catalogChanged(&sys);
+        if (color_rc == ok) {
+            if (color.revision != before.revision) return catalogChanged(&sys);
+            sys.write("    source-color flags="); sys.printU64(color.flags);
+            sys.write(" bpc="); sys.printU64(color.bpc);
+            sys.write(" primaries="); sys.printU64(color.primaries);
+            sys.write(" transfer="); sys.printU64(color.transfer);
+            sys.write(" range="); sys.printU64(color.range);
+            sys.write(" gamma-lut="); sys.printU64(color.gamma_entries);
+            sys.write(" degamma-lut="); sys.printU64(color.degamma_entries);
+            sys.write(" matrix-bits="); sys.printU64(color.ctm_fraction_bits);
+            sys.write(" hdr-transfers="); sys.printU64(color.transfers & 12); sys.println("");
+        } else sys.println("    source-color unavailable");
         if (info.edid_bytes == 0) { sys.println("    EDID unavailable; receiver power state unknown"); continue; }
         gfx.readReceiver(&ctx, &info, &raw, &receiver) catch |err| {
             if (err == error.Stale) return catalogChanged(&sys);
@@ -56,6 +71,14 @@ pub fn inventory(app: *r4os.App) i32 {
         sys.write(" colors="); sys.printU64(receiver.colors);
         sys.write(" audio-formats="); sys.printU64(receiver.audio_count);
         sys.write(" basic-audio="); sys.printU64(@intFromBool(receiver.basic_audio)); sys.println("");
+        sys.write("    receiver-color bpc="); sys.printU64(receiver.bits_per_color);
+        sys.write(" hdmi-deep-color="); sys.printU64(receiver.hdmi_deep_color);
+        sys.write(" rgb-range-selectable="); sys.printU64(@intFromBool(receiver.rgb_quantization_selectable));
+        sys.write(" hdr-eotf="); sys.printU64(receiver.hdr_eotf);
+        sys.write(" hdr-static="); sys.printU64(receiver.hdr_static);
+        sys.write(" luminance-codes=");
+        for (receiver.hdr_luminance, 0..) |value, i| { if (i != 0) sys.putc('/'); sys.printU64(value); }
+        sys.println("");
     }
     var after: a.GfxDisplayRevision = .{};
     if (ctx.revision(&after) != ok or after.revision != before.revision) return catalogChanged(&sys);
