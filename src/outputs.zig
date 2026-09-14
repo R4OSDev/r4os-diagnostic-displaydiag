@@ -58,6 +58,34 @@ pub fn inventory(app: *r4os.App) i32 {
             sys.write(" matrix-bits="); sys.printU64(color.ctm_fraction_bits);
             sys.write(" hdr-transfers="); sys.printU64(color.transfers & 12); sys.println("");
         } else sys.println("    source-color unavailable");
+        for (0..8) |head| {
+            var target: a.GfxOutputTarget = .{};
+            if (draw.displayOutputTarget(info.identity.adapter_id, @intCast(head), &target) != ok or
+                target.connector_id != info.identity.connector_id or target.connection_generation != info.identity.connection_generation) continue;
+            var refresh: a.GfxOutputRefresh = .{};
+            if (draw.gfxOutputRefresh(&target, &refresh) != ok) { sys.println("    VRR status unavailable; fixed fallback"); continue; }
+            const cap = refresh.capabilities; const state = refresh.status; const measured = refresh.measured;
+            sys.write("    VRR capability flags="); sys.printU64(cap.flags);
+            sys.write(" origin="); sys.printU64(cap.origin);
+            sys.write(" min-mHz="); sys.printU64(cap.min_millihz);
+            sys.write(" max-mHz="); sys.printU64(cap.max_millihz);
+            sys.write(" nominal-mHz="); sys.printU64(cap.nominal_millihz); sys.println("");
+            sys.write("    VRR state=");
+            sys.write(if (state.phase <= 4) @tagName(@as(gfx.edid.vrr.State, @enumFromInt(state.phase))) else "lost");
+            sys.write(" reason="); sys.write(if (state.reason <= 13) @tagName(@as(gfx.edid.vrr.Reason, @enumFromInt(state.reason))) else "unknown");
+            sys.write(" policy="); sys.printU64(state.policy);
+            sys.write(" request="); sys.printU64(state.request_sequence);
+            sys.write(" core="); sys.printU64(state.core_point); sys.write(" receipt="); sys.printU64(state.receipt); sys.println("");
+            sys.write("    observed refresh samples="); sys.printU64(measured.samples);
+            sys.write(" gaps="); sys.printU64(measured.gaps);
+            sys.write(" at-ns="); sys.printU64(measured.observed_ns);
+            if (measured.samples != 0) {
+                sys.write(" mean-mHz="); sys.printU64(measured.millihz);
+                sys.write(" last/min/max-ns="); sys.printU64(measured.last_period_ns); sys.putc('/');
+                sys.printU64(measured.min_period_ns); sys.putc('/'); sys.printU64(measured.max_period_ns);
+            } else sys.write(" measured-rate=unknown");
+            sys.println("");
+        }
         if (info.edid_bytes == 0) { sys.println("    EDID unavailable; receiver power state unknown"); continue; }
         gfx.readReceiver(&ctx, &info, &raw, &receiver) catch |err| {
             if (err == error.Stale) return catalogChanged(&sys);
