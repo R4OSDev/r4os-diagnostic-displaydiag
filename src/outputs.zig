@@ -57,6 +57,19 @@ pub fn inventory(app: *r4os.App) i32 {
             sys.write(" degamma-lut="); sys.printU64(color.degamma_entries);
             sys.write(" matrix-bits="); sys.printU64(color.ctm_fraction_bits);
             sys.write(" hdr-transfers="); sys.printU64(color.transfers & 12); sys.println("");
+            if (color.size >= 192) {
+                sys.write("    active-link="); sys.write(switch (color.link_kind) {
+                    a.gfx_output_link_tmds => "TMDS", a.gfx_output_link_frl => "FRL",
+                    a.gfx_output_link_dp_sst => "DP-SST", a.gfx_output_link_dp_mst => "DP-MST", else => "unknown",
+                });
+                sys.write(" lanes="); sys.printU64(color.link_lanes);
+                sys.write(" lane-Mbit/s="); sys.printU64(color.link_rate_mbps);
+                sys.write(" payload-bit/s="); sys.printU64(color.link_payload_bits_per_second);
+                sys.write(" FEC="); sys.printU64(@intFromBool(color.link_flags & a.gfx_output_link_fec != 0));
+                sys.write(" DSC-bpp-x16="); sys.printU64(color.compressed_bpp_x16); sys.println("");
+                sys.write("    candidate-caps DSC-depths="); sys.printU64(color.dsc_depths);
+                sys.write(" max-FRL-rate="); sys.printU64(color.max_frl_rate); sys.println(" (mode admission required)");
+            }
         } else sys.println("    source-color unavailable");
         for (0..8) |head| {
             var target: a.GfxOutputTarget = .{};
