@@ -376,6 +376,7 @@ const App = struct {
 pub fn r4_app_main(r4_app: *r4os.App) i32 {
     const sys = r4_app.system();
     const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    if (std.ascii.eqlIgnoreCase(args, "/COMPILER")) return @import("compiler.zig").run(r4_app);
     if (args.len >= 7 and std.ascii.eqlIgnoreCase(args[0..7], "/NVIDIA") and
         (args.len == 7 or args[7] == ' ' or args[7] == '\t'))
         return @import("nvidia.zig").run(r4_app, std.mem.trim(u8, args[7..], " \t"));

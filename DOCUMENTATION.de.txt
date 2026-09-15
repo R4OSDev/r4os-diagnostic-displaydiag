@@ -125,3 +125,14 @@ DISPLAYD 0.1.10: /NVIDIA [Text] filtert die vorhandenen vollstaendigen
 Bootzeilen ohne Gross-/Kleinschreibung. Maximal128 Filterbytes; keine
 Treffer werden mit Exitstatus1 gemeldet. /NVIDIA boot- oder rejected
 begrenzt SSH-Ausgaben. Keine erneute Hardwareprobe. Auf OssiPC geprueft.
+
+
+Laufzeitcompiler (0.79.34 / DISPLAYD 0.1.35)
+----------------------------------------
+DISPLAYD /COMPILER verwendet die optionale R4NAK.R4L und prueft echte
+SPIR-V/NIR/NAK-Uebersetzung im R4OS-Worker. Ein gemeinsamer begrenzter Lauf
+prueft vier Ziel-SMs, Wiederholbarkeit, geaenderten Quellcode, OOM/Deadline,
+Eingabealias, Cacheidentitaet/-integritaet, atomare Dateiveroeffentlichung
+und sieben Formatbeschreibungen. Private Dateien unter C:\TEMP werden
+wieder entfernt. Fehlende Library ergibt einen klaren Diagnosefehler.
+Keine GPU-Ausfuehrung; Details: Docs/Drivers/GrafikCompiler07934.txt/.json.

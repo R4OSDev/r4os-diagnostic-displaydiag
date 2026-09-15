@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.33`
+- Version: `0.1.35`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -190,3 +190,16 @@ changed driver identity and damaged code must return cache misses before the
 original entry returns its header/code ranges. `software-cache` identifies
 this result; no NVIDIA commands or GPU pixels are involved. A missing optional
 shader interface reports `unavailable` and preserves the other diagnostics.
+
+
+## Runtime compiler diagnostic
+
+`DISPLAYD /COMPILER` explicitly loads the optional R4NAK `COMPILER_V1`
+interface and translates a self-authored SPIR-V fragment shader on R4OS.
+One bounded group checks SM75/86/89/120 output hashes, reproducibility,
+changed source, worker OOM recovery, deadline, malformed/aliased input,
+driver/GPU/ABI/format/generation cache identity, corruption/truncation,
+atomic disk-cache publication and seven format descriptions. Temporary cache
+files use private program-generation names under C:\TEMP and are removed.
+Missing R4NAK reports a diagnostic failure; normal display commands remain
+usable. This mode does not execute GPU work or establish hardware support.
