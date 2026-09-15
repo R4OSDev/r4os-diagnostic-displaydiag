@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.23`
+- Version: `0.1.33`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -41,6 +41,14 @@ It does not present a frame or probe hardware. Older kernels without the
 optional R4DEV slot report it as unavailable. The normal smoke also accepts
 CPU presentation onto native scanout (`native-cpu`); GPU completion is not
 implied.
+
+`DISPLAYD /POWER` requests bounded GPU telemetry collection and prints the
+current shared cache without waiting or generating work. Run it again after
+one second for updated data. P-state, firmware target clocks, temperature,
+power, limits, utilization and GPU timer values retain explicit reliability
+states. Unsupported devices report unknown. Timer deltas are sampling
+intervals, not job durations; clocks are firmware targets. The optional
+R4DRAW tail is available from Kernel 0.1.179.
 
 `DISPLAYD /STATS [head-id]` reads one coherent native presentation snapshot
 (default head 0), without submitting a frame. Acquire/render, Window submit,

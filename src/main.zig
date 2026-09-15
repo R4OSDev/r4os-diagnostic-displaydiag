@@ -171,6 +171,38 @@ const App = struct {
         }
     }
 
+    fn reportPower(self: *App) i32 {
+        const a = r4os.abi;
+        var seen: [a.gfx_queue_backend_capacity]u32 = @splat(0);
+        var count: usize = 0;
+        self.sys.println("DISPLAYD power: cached sensor data; bounded collection requested");
+        for (0..a.gfx_queue_backend_capacity) |i| {
+            var backend: a.GfxBackendInfo = .{};
+            if (self.draw.queues().backendInfo(@intCast(i), &backend) != 1 or backend.size < @sizeOf(a.GfxBackendInfo) or backend.memory_generation == 0) continue;
+            if (std.mem.indexOfScalar(u32, seen[0..count], backend.binding.adapter_id) != null) continue;
+            seen[count] = backend.binding.adapter_id; count += 1;
+            self.sys.write("  adapter="); self.sys.printU64(backend.binding.adapter_id);
+            var state: a.GfxTelemetryState = .{};
+            const result = self.draw.gfxTelemetry(&.{ .adapter_id = backend.binding.adapter_id, .memory_generation = backend.memory_generation,
+                .metric_mask = a.gfx_telemetry_metric_mask }, &state);
+            if (result != a.gfx_buffer_result_ok) { self.sys.println(" telemetry=unknown"); continue; }
+            self.sys.write(" state="); self.sys.printU64(state.state);
+            self.sys.write(" policy="); self.sys.write(r4os.gfx_telemetry.policyName(state.policy));
+            self.sys.write(" finite-boost-request="); self.sys.printU64(state.boost); self.sys.println("");
+            for (0..r4os.gfx_telemetry.fields.len) |field| {
+                var line: [144]u8 = undefined;
+                self.sys.write("    "); self.sys.println(r4os.gfx_telemetry.formatLine(&line, &state, field));
+            }
+            const throttle = state.metrics[1];
+            self.sys.write("    Throttle reason mask: ");
+            if (throttle.status == a.gfx_telemetry_fresh) self.sys.printU64(@intCast(throttle.values[0])) else self.sys.write("unknown");
+            self.sys.println("");
+        }
+        if (count == 0) self.sys.println("  telemetry=unknown (no registered GPU execution backend)");
+        self.sys.println("Targets are firmware clock requests. GPU timer deltas are sampling intervals, not job durations.");
+        return 0;
+    }
+
     fn checkDamagePresent(self: *App) bool {
         var capabilities: r4os.abi.DisplayPresentCapabilities = .{};
         if (self.draw.displayPresentCapabilities(&capabilities) != 0) {
@@ -370,6 +402,10 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
     if (std.ascii.eqlIgnoreCase(args, "/STATE")) {
         var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
         return app.reportState();
+    }
+    if (std.ascii.eqlIgnoreCase(args, "/POWER")) {
+        var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
+        return app.reportPower();
     }
     if (baseline.requested(args)) return baseline.run(r4_app);
     var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
