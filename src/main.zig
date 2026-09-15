@@ -132,7 +132,43 @@ const App = struct {
             self.sys.write(" operation-deadline-ns="); self.sys.printU64(mode.operation_deadline_ns);
             self.sys.println("");
         }
+        self.reportMemory();
         return if (ok) 0 else 1;
+    }
+
+    fn reportMemory(self: *App) void {
+        var stats: r4os.abi.GfxBufferStats = .{};
+        if (self.draw.buffers().stats(&stats) != r4os.abi.gfx_buffer_result_ok or stats.version != 1 or stats.size < 136) return;
+        self.sys.write("  BO bytes RAM="); self.sys.printU64(stats.system_bytes);
+        self.sys.write(" device="); self.sys.printU64(stats.device_bytes);
+        self.sys.write(" backed-RAM="); self.sys.printU64(stats.system_backed_bytes);
+        self.sys.write(" backed-device="); self.sys.printU64(stats.device_backed_bytes);
+        self.sys.println("");
+        self.sys.write("  BO pin bytes RAM="); self.sys.printU64(stats.system_pinned_bytes);
+        self.sys.write(" device="); self.sys.printU64(stats.device_pinned_bytes);
+        self.sys.write(" scanout="); self.sys.printU64(stats.scanout_pinned_bytes);
+        self.sys.write(" mapping="); self.sys.printU64(stats.device_mapped_bytes);
+        self.sys.println(" (overlapping subsets)");
+        self.sys.write("  BO pending bytes allocation="); self.sys.printU64(stats.allocating_bytes);
+        self.sys.write(" destruction="); self.sys.printU64(stats.destroying_bytes);
+        self.sys.write(" retained="); self.sys.printU64(stats.retained_bytes);
+        self.sys.println("");
+        for (0..r4os.abi.gfx_queue_backend_capacity) |index| {
+            var backend: r4os.abi.GfxBackendInfo = .{};
+            if (self.draw.queues().backendInfo(@intCast(index), &backend) != 1) continue;
+            if (backend.size < @sizeOf(r4os.abi.GfxBackendInfo) or backend.memory_generation == 0) continue;
+            var budget: r4os.abi.GfxDeviceBudgetState = .{};
+            if (self.draw.buffers().memoryBudget(&.{ .adapter_id = backend.binding.adapter_id,
+                .memory_generation = backend.memory_generation }, &budget) != r4os.abi.gfx_buffer_result_ok) continue;
+            self.sys.write("  BO budget adapter="); self.sys.printU64(budget.adapter_id);
+            self.sys.write(" memory-generation="); self.sys.printU64(budget.memory_generation);
+            self.sys.write(" device-charge/limit="); self.sys.printU64(budget.charged_bytes);
+            self.sys.write("/"); self.sys.printU64(budget.limit_bytes);
+            self.sys.write(" shared-charge/limit="); self.sys.printU64(budget.shared_charged_bytes);
+            self.sys.write("/"); self.sys.printU64(budget.shared_limit_bytes);
+            self.sys.write(" closing="); self.sys.printU64(budget.flags & r4os.abi.gfx_memory_budget_closing);
+            self.sys.println("");
+        }
     }
 
     fn checkDamagePresent(self: *App) bool {
