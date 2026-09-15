@@ -43,6 +43,24 @@ pub fn inventory(app: *r4os.App) i32 {
         sys.write(" source="); sys.write(if (info.flags & a.gfx_output_flag_receiver_only != 0) "receiver-only" else if (info.flags & a.gfx_output_flag_firmware_snapshot != 0) "firmware-snapshot" else "driver");
         sys.write(" modes="); sys.printU64(info.mode_count);
         sys.write(" edid-bytes="); sys.printU64(info.edid_bytes); sys.println("");
+        var power: a.GfxOutputPower = .{};
+        const power_rc = ctx.power(&info.identity, &power);
+        if (power_rc == a.gfx_output_error_stale) return catalogChanged(&sys);
+        if (power_rc == ok) {
+            sys.write("    screen-power="); sys.write(switch (power.phase) {
+                a.gfx_power_phase_on => "on", a.gfx_power_phase_stopping => "stopping",
+                a.gfx_power_phase_off => "off", a.gfx_power_phase_waking => "waking", else => "unavailable",
+            });
+            sys.write(" capabilities="); sys.printU64(power.capabilities);
+            sys.write(" sequence="); sys.printU64(power.sequence);
+            sys.write(" request="); sys.printU64(power.request_sequence);
+            sys.write(" reason="); sys.printU64(power.reason);
+            sys.write(" control="); sys.printU64(power.control_receipt);
+            sys.write(" core="); sys.printU64(power.core_point);
+            sys.write(" window="); sys.printU64(power.window_point); sys.println("");
+        } else if (power_rc == a.gfx_output_error_unsupported or power_rc == a.err_no_fn or power_rc == a.err_no_group)
+            sys.println("    screen-power=unsupported")
+        else return catalogChanged(&sys);
         var color: a.GfxOutputColorState = .{};
         const color_rc = ctx.color(&info.identity, &color);
         if (color_rc == a.gfx_output_error_stale) return catalogChanged(&sys);
