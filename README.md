@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.37`
+- Version: `0.1.38`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -17,6 +17,13 @@ native request dispatch/wait, canonical BO transfer/import/release, stale
 memory generations and unchanged failure outputs. The provider has synthetic
 backing and never executes GPU work. Without that fixture the normal check
 retains its software scope.
+
+Baseline schema 2 accepts bootfb and native CPU presentation and reports the
+loaded driver/firmware policy. Its 15-second cap bounds the entire measurement.
+All requested samples must succeed and backend/geometry must remain unchanged.
+Logical byte models, wall spans, coarse scheduler ticks and actual completion
+milestones are separate. Eight-sample p95/p99 are maxima, not tail-confidence
+estimates. See Docs/Desktop/GrafikIntegration07944.txt.
 
 ## Build
 

@@ -111,10 +111,10 @@ fn parse(args: []const u8) ?Options {
 }
 
 fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.Context, options: Options, report: *Report) bool {
-    report.line("DISPLAYD baseline schema=1", .{});
+    report.line("DISPLAYD baseline schema=2", .{});
     report.line("scope=synthetic-cpu-scenes present={s} samples_per_scene={d}", .{ if (options.present) "yes" else "no", options.samples });
-    report.line("timings=monotonic-wall-including-preemption percentiles=nearest-rank warmup=1 limits=64MB-per-buffer,15s-scene-budget", .{});
-    report.line("cpu-frequency=unavailable gpu-clock=unavailable firmware-version=unavailable sink-power=external-observation-required", .{});
+    report.line("timings=monotonic-wall-including-preemption percentiles=nearest-rank warmup=1 limits=64MB-per-buffer,15s-total-measurement-budget", .{});
+    report.line("cpu-frequency=unavailable gpu-clock=unavailable sink-power=external-observation-required", .{});
     report.line("cpu-time=scheduler-run-ticks coarse; CPU phase wall spans are not CPU execution time", .{});
     var release: [512]u8 = undefined;
     if (options.trace) sys.println("DISPLAYD baseline phase: release-and-hardware");
@@ -128,15 +128,21 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     if (dev.hardwareSummary()) |hardware| report.line("logical-cpus={d} pci-devices={d} pcie-devices={d}", .{ hardware.cpu_logical_processors, hardware.legacy_pci_devices, hardware.pcie_devices });
     if (options.trace) sys.println("DISPLAYD baseline phase: inventory-and-boot-snapshot");
     hardwareReport(dev, report);
+    if (r4os.graphics_status.Snapshot.read(&dev)) |status| {
+        var line: [256]u8 = undefined;
+        for (0..7) |index| report.line("{s}", .{status.line(&line, index)});
+    }
     const before = dev.displaySummary() orelse return false;
     report.line("display-owner={s} mode={d}x{d}x{d} pitch={d} cache-policy={d}", .{ fixed(&before.backend_name), before.width, before.height, before.bpp, before.pitch, before.cache_policy });
     var caps: abi.DisplayPresentCapabilities = .{};
     if (draw.displayPresentCapabilities(&caps) != 0) return false;
     report.line("present-backend={s} fallback={s} kind={d} caps=0x{x} max-regions={d}", .{ fixed(&caps.backend_name), fixed(&caps.fallback_name), caps.backend_kind, caps.flags, caps.max_regions });
     const software = caps.backend_kind == abi.display_present_backend_bootfb_cpu or caps.backend_kind == abi.display_present_backend_external_blit;
+    const native = caps.backend_kind == abi.display_present_backend_native_cpu;
     report.line("gpu-timestamps=unavailable visible-present=unavailable scanout-completion=unavailable", .{});
-    report.line("upload=unavailable-separately synchronous-submit-includes-validation-and-CPU-framebuffer-copy", .{});
-    report.line("queue-wait={s} queue-depth={s} completion=CPU-store-fence-only", .{ if (software) "not-applicable-no-async-queue" else "unavailable", if (software) "not-applicable" else "unavailable" });
+    report.line("upload=unavailable-separately synchronous-submit-includes-validation-copy-and-completion-wait", .{});
+    report.line("completion={s} queue-wait={s}", .{ if (software) "CPU-store-fence" else if (native) "device-execution" else "unknown", if (software) "not-applicable" else "included-in-submit-wall" });
+    report.line("caller-inflight-limit=1 caller-outstanding-after-return=0 native-bridge-capacity={d} global-device-queue-depth=unavailable", .{@as(u32, if (native) 1 else 0)});
     report.line("traffic=calculated-logical-bytes; DRAM/PCIe transactions, cache-misses, RFO, scanout-reads=unavailable", .{});
     var clock_info: abi.MonotonicClockInfo = .{};
     if (sys.monotonicClock(&clock_info) <= 0 or clock_info.flags & abi.monotonic_clock_flag_valid == 0 or clock_info.frequency_hz != abi.monotonic_clock_frequency_hz) {
@@ -149,7 +155,7 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     const width = before.width;
     const height = before.height;
     const pixel_count = @as(u64, width) * height;
-    if (width < 8 or height < 8 or pixel_count > 16 * 1024 * 1024 or (options.present and (!software or caps.max_regions < 4 or caps.flags & abi.display_present_cap_sync_fence == 0))) {
+    if (width < 8 or height < 8 or pixel_count > 16 * 1024 * 1024 or (options.present and ((!software and !native) or caps.max_regions < 4 or caps.flags & abi.display_present_cap_sync_fence == 0))) {
         report.line("baseline unsupported geometry/backend; no allocations or presents", .{});
         return false;
     }
@@ -175,6 +181,12 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     }
     const elapsed = clock.elapsed(started) orelse return false;
     const after = dev.displaySummary() orelse return false;
+    if (before.backend_kind != after.backend_kind or !std.mem.eql(u8, &before.backend_name, &after.backend_name) or
+        before.width != after.width or before.height != after.height or before.pitch != after.pitch)
+    {
+        report.line("measurement-invalid=backend-or-mode-changed", .{});
+        return false;
+    }
     report.line("duration-ns={d} successful-measured-presents={d} returned-pixels-times-bpp={d}", .{ elapsed, measured_frames, measured_bytes });
     report.line("global-present-delta={d} global-byte-delta={d} scope=includes-other-producers-and-warmup", .{ after.present_count -| before.present_count, after.present_bytes_total -| before.present_bytes_total });
     report.line("resources=two-bounded-buffers-freed-on-every-return output-I/O=outside-measured-spans", .{});
@@ -257,7 +269,9 @@ fn measureScene(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4d
             if (a.id == b.id and b.run_ticks >= a.run_ticks) report.line("  scheduler-run-ticks={d} includes-warmup-and-instrumentation", .{b.run_ticks - a.run_ticks});
         }
     } else report.line("  scheduler-run-ticks=unavailable", .{});
-    return !options.present or scene == .idle or submit.count != 0;
+    // The ordinary bootfb CPU path is itself marked as fallback. Its bytes
+    // remain valid samples; rejected submissions never count as a full run.
+    return !options.present or scene == .idle or (submit.count == options.samples and rejected == 0);
 }
 
 fn hardwareReport(dev: r4os.r4dev.Context, report: *Report) void {
@@ -273,7 +287,6 @@ fn hardwareReport(dev: r4os.r4dev.Context, report: *Report) void {
     }
     report.line("subsystem-id=unavailable pci-revision=unavailable chip-id=unavailable vbios=unavailable BAR-sizes=unavailable irq-capabilities=unavailable", .{});
     report.line("reason=not-cached-by-R4DEV; no-foreign-PCI-config-or-GPU-register-access; owner-probe-required", .{});
-    report.line("reference-only: NVIDIA 10DE:2504 maps to GeForce RTX 3060; not a measured chip/board identity", .{});
     if (dev.bootInfoSummary()) |boot| {
         report.line("bootloader={s} framebuffer=0x{x} EDID-address=0x{x} EDID-bytes={d} EDID-source=boot-snapshot-not-live-DDC", .{ fixed(&boot.bootloader_name), boot.framebuffer_address, boot.edid_address, boot.edid_size });
         if (boot.edid_address != 0 and boot.edid_size >= 128 and boot.edid_size <= 32768) {
