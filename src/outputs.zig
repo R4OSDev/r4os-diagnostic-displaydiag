@@ -158,7 +158,7 @@ pub fn run(app: *r4os.App, native: bool) i32 {
     var passed = firmware(app, &ctx);
     if (passed and native) passed = hotplug(app, &ctx);
     passed = buffers.stats(&after) == ok and passed;
-    passed = check(&sys, before.objects == after.objects and before.references == after.references and before.leases == after.leases and before.committed_bytes == after.committed_bytes, @src().line) and passed;
+    passed = check(&sys, @import("resource_balance.zig").buffers(&sys, before, after), @src().line) and passed;
     sys.println(if (passed) "DISPLAYD outputs result: OK resources=balanced hardware-writes=none" else "DISPLAYD outputs result: FAILED");
     return if (passed) 0 else 1;
 }

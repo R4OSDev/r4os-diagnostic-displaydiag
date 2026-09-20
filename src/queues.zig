@@ -32,11 +32,13 @@ pub fn run(app: *r4os.App, native: bool) i32 {
     var before: a.GfxBufferStats = .{};
     var after: a.GfxBufferStats = .{};
     if (buffers.stats(&before) != ok) return 1;
+    const runtime = @import("resource_balance.zig").Runtime.capture(app) orelse return 1;
     var passed = software(&sys, &buffers, &queues);
     if (native and passed) passed = driver(&sys, &buffers, &queues);
     if (native and passed) passed = killedProducer(&sys, &queues, &buffers, before.retained_bytes);
     passed = buffers.stats(&after) == ok and passed;
-    passed = passed and before.objects == after.objects and before.references == after.references and before.leases == after.leases and before.committed_bytes == after.committed_bytes;
+    passed = @import("resource_balance.zig").buffers(&sys, before, after) and passed;
+    passed = runtime.balanced(app) and passed;
     sys.println(if (passed) "DISPLAYD queues result: OK resources=balanced" else "DISPLAYD queues result: FAILED");
     return if (passed) 0 else 1;
 }

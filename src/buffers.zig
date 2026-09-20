@@ -16,8 +16,7 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
     passed = passed and @import("render_resources.zig").run(app);
     passed = passed and @import("native_allocation.zig").run(app);
     passed = buffers.stats(&after) == ok and passed;
-    passed = passed and before.objects == after.objects and before.references == after.references and
-        before.leases == after.leases and before.committed_bytes == after.committed_bytes and before.retained_bytes == after.retained_bytes;
+    passed = @import("resource_balance.zig").buffers(&sys, before, after) and passed;
     sys.println(if (passed) "DISPLAYD software-buffer: OK" else "DISPLAYD software-buffer: FAILED");
     if (require_driver) {
         for ([_][]const u8{

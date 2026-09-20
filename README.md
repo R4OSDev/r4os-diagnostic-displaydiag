@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.36`
+- Version: `0.1.37`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -212,3 +212,14 @@ reported by /STATE for native graphics. It reads retained container metadata,
 not the potentially newer installed file. Firmware-bundle is a declaration,
 not proof of device execution. Absent owners return an explicit absent result;
 unsupported/busy APIs return a failure instead of synthesizing a version.
+
+## Resource balance (0.79.43)
+
+Existing `/BUFFERS`, `/QUEUES`, `/OUTPUTS` and `/VIRTIO` probes compare every
+current BO counter, including backing, pins, mappings and pending destruction.
+`/QUEUES` also compares current IRQ registration counts, work/deadline slots and
+waiters with a 1000-ms bound for deferred cleanup. Historical counters and total
+system timer counts are not substituted for live resource counts. The Virtio
+timeout case checks the exact retiring primary BO and unchanged other counters.
+Software evidence: workspace Docs/Deployment/GrafikStabilitaet07943.txt; SMP4
+logs belong to Distribution/Tests/Reports/0.79.43. Physical NVIDIA evidence is separate.

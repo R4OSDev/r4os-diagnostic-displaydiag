@@ -78,17 +78,25 @@ pub fn exercise(app: *r4os.App, expect_failure: bool, expect_resize: bool) i32 {
             sys.sleepTicks(1);
         }
         const restored = dev.displayState() orelse return 1;
+        // Reset retires precisely the primary system-memory BO and its
+        // persistent backing mapping. All other current counters stay put.
+        const backing_bytes = std.mem.alignForward(u64, @as(u64, width) * height * 4, 4096);
+        var expected = before;
+        if (expected.objects < 1 or expected.references < 2 or expected.leases < 1) return 1;
+        expected.objects -= 1; expected.references -= 2; expected.leases -= 1;
+        inline for (.{ "committed_bytes", "system_bytes", "system_backed_bytes", "system_pinned_bytes", "device_mapped_bytes" }) |field| {
+            if (@field(expected, field) < backing_bytes) return 1;
+            @field(expected, field) -= backing_bytes;
+        }
         const passed = failed and restored.state == a.display_state_bootfb and restored.driver_owner == 0 and
             restored.capabilities & a.display_state_cap_firmware_writable != 0 and
-            after.objects + 1 == before.objects and after.references + 2 == before.references and after.leases + 1 == before.leases and
-            after.retained_bytes == before.retained_bytes and after.committed_bytes < before.committed_bytes;
+            @import("resource_balance.zig").buffers(&sys, expected, after);
         _ = run(app);
         sys.println(if (passed) "DISPLAYD virtio recovery: OK timeout=observed bootfb=restored source-BO=released leases=balanced" else "DISPLAYD virtio recovery: FAILED");
         return if (passed) 0 else 1;
     }
     if (buffers.stats(&after) != a.gfx_buffer_result_ok) return 1;
-    const passed = before.objects == after.objects and before.references == after.references and before.leases == after.leases and
-        before.committed_bytes == after.committed_bytes and before.retained_bytes == after.retained_bytes;
+    const passed = @import("resource_balance.zig").buffers(&sys, before, after);
     _ = run(app);
     sys.println(if (passed) "DISPLAYD virtio frames: OK count=32 shared-BO=reused resources=balanced completion=device-execution vblank=unknown" else "DISPLAYD virtio frames: FAILED");
     return if (passed) 0 else 1;
