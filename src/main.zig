@@ -121,6 +121,10 @@ const App = struct {
         self.sys.write("x");
         self.sys.printU64(value.boot_height);
         self.sys.println("");
+        if (r4os.graphics_status.Snapshot.read(&self.dev)) |current| {
+            var line: [224]u8 = undefined;
+            for (0..8) |field| self.sys.println(current.line(&line, field));
+        }
         var mode: r4os.abi.GfxModeStatus = .{};
         if (self.draw.outputs().status(0, &mode) == r4os.abi.gfx_output_ok and mode.ticket != 0) {
             self.sys.write("  mode ticket="); self.sys.printU64(mode.ticket);
@@ -376,6 +380,18 @@ const App = struct {
 pub fn r4_app_main(r4_app: *r4os.App) i32 {
     const sys = r4_app.system();
     const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    if (args.len > 8 and std.ascii.eqlIgnoreCase(args[0..8], "/DRIVER ")) {
+        const owner = std.fmt.parseInt(u32, std.mem.trim(u8, args[8..], " \t"), 10) catch return 1;
+        const dev = r4_app.devicesLowLevel() orelse return r4os.abi.err_no_group;
+        var info: r4os.abi.DriverModuleInfo = .{};
+        const rc = dev.driverModuleInfoRaw(owner, &info);
+        if (rc == 0) { sys.println("DISPLAYD driver: absent"); return 0; }
+        if (rc != 1) { sys.write("DISPLAYD driver: unavailable rc="); sys.printI32(rc); sys.println(""); return 1; }
+        var line: [224]u8 = undefined;
+        sys.println(std.fmt.bufPrint(&line, "DISPLAYD driver: owner={d} name={s} version={s} firmware-bundle={s} generation={d} module-generation={d} flags={d}",
+            .{ info.owner, r4os.graphics_status.z(&info.driver_name), r4os.graphics_status.z(&info.module_version), r4os.graphics_status.z(&info.firmware_version), info.generation, info.module_generation, info.flags }) catch return 1);
+        return 0;
+    }
     if (std.ascii.eqlIgnoreCase(args, "/COMPILER")) return @import("compiler.zig").run(r4_app);
     if (args.len >= 7 and std.ascii.eqlIgnoreCase(args[0..7], "/NVIDIA") and
         (args.len == 7 or args[7] == ' ' or args[7] == '\t'))

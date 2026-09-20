@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.35`
+- Version: `0.1.36`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -203,3 +203,12 @@ atomic disk-cache publication and seven format descriptions. Temporary cache
 files use private program-generation names under C:\TEMP and are removed.
 Missing R4NAK reports a diagnostic failure; normal display commands remain
 usable. This mode does not execute GPU work or establish hardware support.
+
+Loaded versions (0.1.36)
+------------------------
+/STATE also prints the shared loaded-driver/fallback projection. /DRIVER N
+reads one exact runtime owner from R4DEV driver_module_info; use the owner
+reported by /STATE for native graphics. It reads retained container metadata,
+not the potentially newer installed file. Firmware-bundle is a declaration,
+not proof of device execution. Absent owners return an explicit absent result;
+unsupported/busy APIs return a failure instead of synthesizing a version.
