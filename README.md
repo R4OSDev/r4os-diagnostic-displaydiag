@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.41`
+- Version: `0.1.42`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -13,10 +13,16 @@ The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
 
 `DISPLAYD /AMDCOMPILER` runs the loaded optional R4ACO compiler in real
-R4SYS workers. It compiles five SPIR-V graphics/compute fixtures, records
+R4SYS workers. It compiles six SPIR-V graphics/compute/texture fixtures, records
 GFX9 code identities and tests OOM retirement, deadline, recovery and
 checksummed atomic cache files under C:\TEMP. It is an explicit CPU-only
 probe; no GPU command or physical-device access is performed.
+
+`DISPLAYD /AMDRENDER` loads optional R4AMD `RENDER_V1` and `IMAGE_V1`.
+It hashes six embedded ACO programs and calls the real AddrLib and C++ PM4
+encoders for pipeline, indexed and automatic draws. Invalid state, index
+bounds and alias errors must preserve outputs. The addresses and Picasso
+profile are synthetic; all work stays on the CPU.
 
 `DISPLAYD /AMDIMAGE` exercises the optional R4AMD `IMAGE_V1` provider on
 the CPU. It verifies actual loaded AddrLib surface/address/mip/metadata and

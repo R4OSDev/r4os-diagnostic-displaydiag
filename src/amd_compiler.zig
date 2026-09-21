@@ -29,18 +29,20 @@ pub fn run(app: *r4os.App) i32 {
     var code: [4096]u8 = @splat(0);
     var log: [2048]u8 = @splat(0);
     var request: c.R4AcoRequest = .{ .version = 1, .size = @sizeOf(c.R4AcoRequest), .stage = 5, .device_id = 0x15d8, .chip_revision = 0x41, .flags = 0, .word_count = 0, .entry_length = 4, .words = 0, .entry = @intFromPtr("main".ptr), .budget_bytes = 64 * 1024 * 1024, .deadline_ns = 0, .code = @intFromPtr(&code), .code_capacity = code.len, .log_capacity = log.len, .log = @intFromPtr(&log) };
-    const Case = struct { name: []const u8, stage: u32, words: []const u32 };
+    const Case = struct { name: []const u8, stage: u32, words: []const u32, flags: u32 = 0 };
     const cases = [_]Case{
         .{ .name = "fullscreen", .stage = 0, .words = &shaders.fullscreen },
         .{ .name = "color", .stage = 4, .words = &shaders.color },
         .{ .name = "copy", .stage = 5, .words = &shaders.copy },
         .{ .name = "fill", .stage = 5, .words = &shaders.fill },
         .{ .name = "shared", .stage = 5, .words = &shaders.shared },
+        .{ .name = "sample", .stage = 4, .words = &shaders.sample, .flags = c.request_textures },
     };
     for (cases) |item| {
         request.words = @intFromPtr(item.words.ptr);
         request.word_count = @intCast(item.words.len);
         request.stage = item.stage;
+        request.flags = item.flags;
         const status = compile(&job, request);
         if (status != 0) {
             sys.write(log[0..@min(job.result.log_length, log.len)]);
@@ -58,6 +60,7 @@ pub fn run(app: *r4os.App) i32 {
     request.words = @intFromPtr(&shaders.copy);
     request.word_count = shaders.copy.len;
     request.stage = 5;
+    request.flags = 0;
     var status = compile(&job, request);
     if (status != 0) return fail(&sys, @src().line, status);
     const original = job.result;
