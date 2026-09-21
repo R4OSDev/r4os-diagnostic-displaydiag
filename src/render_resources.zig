@@ -133,7 +133,7 @@ fn exercise(sys: *const r4os.r4sys.Context, client: *const gfx.DeviceV1Client, d
     for (pixels, 0..) |pixel, i| if (pixel != @as(u32, if (i / 4 >= 1 and i % 4 < 2) 0x2468ac else 0)) return false;
     var state: gfx.R4GfxDeviceInfo = undefined;
     if (client.device_info(device, &state) != gfx.status_ok or state.upload_bytes != 0 or
-        state.gpu_copy_bytes != @as(u64, if (receipt.backend == gfx.render_backend_nvidia) 48 else 0)) return false;
+        state.gpu_copy_bytes != @as(u64, if (receipt.backend == gfx.render_backend_nvidia or receipt.backend == gfx.render_backend_amd) 48 else 0)) return false;
     sys.write("DISPLAYD resources: OK DEVICE_V1 backend="); sys.printU64(state.backend);
     sys.write(" copy-bytes=48 completed=2 dependencies=1 pitches=16/24/32 pixels=16 cpu-read="); sys.printU64(state.cpu_read_bytes);
     sys.write(" cpu-write="); sys.printU64(state.cpu_write_bytes); sys.println(" upload=0");
