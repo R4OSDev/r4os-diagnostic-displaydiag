@@ -1,7 +1,7 @@
 R4OS_MODULE_MANIFEST=2
 KIND=R4X
 NAME=DISPLAYD
-VERSION=0.1.40
+VERSION=0.1.41
 LANGUAGE=Zig
 SOURCE=src/main.zig
 ENTRY_MODE=app
@@ -20,6 +20,7 @@ IMPORT=R4AMD:BACKEND_V1:1:1
 IMPORT=R4AMD:IMAGE_V1:1:1
 IMPORT=R4NV:SHADER_V1:1:1
 IMPORT=R4NAK:COMPILER_V1:1:1
+IMPORT=R4ACO:COMPILER_V1:1:1
 ZIG_MODULE=r4gfx:../../Libraries/R4GFX/Bindings/Zig/r4gfx_abi.zig
 ZIG_MODULE=r4gfx_queue:../../Libraries/R4GFX/Bindings/Zig/queue.zig
 META=app.role=diagnostic
@@ -30,3 +31,6 @@ ZIG_MODULE=r4nv:../../Libraries/R4NV/Bindings/Zig/r4nv.zig
 ZIG_MODULE=r4nak:../../Libraries/R4NAK/Bindings/Zig/r4nak.zig
 ZIG_MODULE=r4nak_worker:../../Libraries/R4NAK/Bindings/Zig/worker.zig
 ZIG_MODULE=r4amd:../../Libraries/R4AMD/Bindings/Zig/r4amd.zig
+ZIG_MODULE=r4aco:../../Libraries/R4ACO/Bindings/Zig/r4aco.zig
+ZIG_MODULE=r4aco_worker:../../Libraries/R4ACO/Bindings/Zig/worker.zig
+ZIG_MODULE=r4aco_shaders:../../Libraries/R4ACO/Bindings/Zig/shaders.zig
