@@ -4,13 +4,20 @@
 
 ## Package
 
-- Version: `0.1.38`
+- Version: `0.1.40`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
+
+`DISPLAYD /AMDIMAGE` exercises the optional R4AMD `IMAGE_V1` provider on
+the CPU. It verifies actual loaded AddrLib surface/address/mip/metadata and
+descriptor calls, C++ relocations, modifier rejection and bounded OOM. The
+Picasso profile and GPU address are synthetic; no device, BO or MMIO is used.
+A missing provider reports unavailable. This explicit diagnostic has no
+automatic boot or physical-hardware probe.
 
 With the explicit EXAMPLE `gfx-allocation-test` fixture, `/BUFFERS` also checks
 native request dispatch/wait, canonical BO transfer/import/release, stale

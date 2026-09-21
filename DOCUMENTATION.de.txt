@@ -3,14 +3,21 @@
 
 Ab R4OS 0.79.9 im Full-Profil enthalten; Diagnose startet nur auf Aufruf.
 
-DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.3 prueft
-zusaetzlich den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
+DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.40 prueft
+unter anderem den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
 Regionen, acht geaenderte Pixel, einen externen DISPBLIT-Verbraucher, den
 weiterhin ausgehandelten bootfb-cpu-Fallback, einen synchron abgeschlossenen
 Fence, Input-zu-Present-Zeit und die Ablehnung von mehr als acht Regionen ohne
 eine weitere sichtbare Veroeffentlichung. Der reine bootfb-cpu-Fallback wird
 ebenfalls akzeptiert; globale Zaehler duerfen sich durch andere Produzenten
 aendern. Ein fertiger Fence belegt CPU-Store-Abschluss, nicht VBlank.
+
+AMD-Bildlayouts (0.80.12 / DISPLAYD 0.1.40)
+-----------------------------------------
+DISPLAYD /AMDIMAGE prüft die geladene optionale R4AMD IMAGE_V1 auf der CPU:
+echte AddrLib-Geometrie, Adressen, Mips, Metadaten, Deskriptoren, abgelehnte
+Modifier und begrenztes OOM. Das Picasso-Profil und die GPU-Adresse sind
+synthetisch. Es erfolgen keine BO-, Register- oder Hardwarezugriffe.
 
 Messmodus (0.79.2)
 -----------------

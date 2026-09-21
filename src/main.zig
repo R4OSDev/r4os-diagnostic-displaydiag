@@ -392,6 +392,7 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
             .{ info.owner, r4os.graphics_status.z(&info.driver_name), r4os.graphics_status.z(&info.module_version), r4os.graphics_status.z(&info.firmware_version), info.generation, info.module_generation, info.flags }) catch return 1);
         return 0;
     }
+    if (std.ascii.eqlIgnoreCase(args, "/AMDIMAGE")) return @import("amd_images.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/COMPILER")) return @import("compiler.zig").run(r4_app);
     if (args.len >= 7 and std.ascii.eqlIgnoreCase(args[0..7], "/NVIDIA") and
         (args.len == 7 or args[7] == ' ' or args[7] == '\t'))
