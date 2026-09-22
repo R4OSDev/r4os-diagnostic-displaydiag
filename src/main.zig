@@ -203,7 +203,7 @@ const App = struct {
             self.sys.println("");
         }
         if (count == 0) self.sys.println("  telemetry=unknown (no registered GPU execution backend)");
-        self.sys.println("Targets are firmware clock requests. GPU timer deltas are sampling intervals, not job durations.");
+        self.sys.println("Targets are firmware requests; clocks are queried samples. Fabric is not DRAM. GPU timer deltas are sampling intervals.");
         return 0;
     }
 
