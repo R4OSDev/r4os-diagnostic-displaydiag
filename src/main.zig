@@ -427,6 +427,8 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
         var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
         return app.reportPower();
     }
+    if (std.ascii.eqlIgnoreCase(args, "/AMDPROFILE")) return @import("amd_profile.zig").run(r4_app, true);
+    if (std.ascii.eqlIgnoreCase(args, "/AMDPROFILE SOFTWARE")) return @import("amd_profile.zig").run(r4_app, false);
     if (baseline.requested(args)) return baseline.run(r4_app);
     var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
     return app.run();

@@ -143,3 +143,29 @@ Eingabealias, Cacheidentitaet/-integritaet, atomare Dateiveroeffentlichung
 und sieben Formatbeschreibungen. Private Dateien unter C:\TEMP werden
 wieder entfernt. Fehlende Library ergibt einen klaren Diagnosefehler.
 Keine GPU-Ausfuehrung; Details: Docs/Drivers/GrafikCompiler07934.txt/.json.
+
+AMD-Messszene (0.80.33 / DISPLAYD 0.1.44)
+---------------------------------------
+DISPLAYD /AMDPROFILE verlangt einen aktiven AMD-DEVICE_V1-Adapter mit
+COPY_ROWS und RENDER. Fehlende Faehigkeiten liefern einen Fehler statt
+unbemerkt in Software zu wechseln. DISPLAYD /AMDPROFILE SOFTWARE erzwingt
+Software; identische Dimensionen und Farben erlauben den spaeteren Vergleich.
+Die Szene fill-copy-256x128-v1 verwendet drei wiederverwendete Bilder,
+Fill-/Blitpipeline und Sampler. Nach einem Aufwaerm-Fill folgen32 Fuellungen,
+eine Kopie und ein Readback; alle32768 Pixel werden geprueft. Die BOs bleiben
+bis zum bestaetigten Jobabschluss und Device-Close gehalten.
+
+Upload, Render, Kopie und Readback melden Aufruf- und Warte-Wandzeiten
+getrennt. Allokation und Aufwaermen liegen ausserhalb dieser Intervalle;
+Polling, Praeemption und Validierung gehoeren zur beobachteten Wandzeit.
+GPU-Ausfuehrungsdauer bleibt unknown. Kein Present und keine FPS-Aussage;
+Software-Upload/Readback bezeichnen nur die logischen Phasen im Systemspeicher.
+/STATE zeigt globale BO-Budgets/Pins, /STATS die getrennten Presentquittungen
+und /POWER die vom Treiber bereitgestellten Takt-/Leistungsdaten. Taktziele
+sind weder gemessene Takte noch GPU-Dauern. Fehlende Sensoren bleiben unknown.
+
+Host-Residenz-/Queuepruefungen und die SMP4-Software-Pixelpruefung gehoeren
+zu0.80.33. Der echte Laptopvergleich AMD/Software sowie Present, Multihead
+und Video unter Druck erfolgen ausschliesslich in0.80.39. Die alten
+NVIDIA-Baselineabschnitte oben beschreiben deren damaligen Messpfad, nicht
+die inzwischen asynchronen AMD-DEVICE_V1-Queues.

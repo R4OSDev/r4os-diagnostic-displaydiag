@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.42`
+- Version: `0.1.44`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -43,6 +43,16 @@ All requested samples must succeed and backend/geometry must remain unchanged.
 Logical byte models, wall spans, coarse scheduler ticks and actual completion
 milestones are separate. Eight-sample p95/p99 are maxima, not tail-confidence
 estimates. See Docs/Desktop/GrafikIntegration07944.txt.
+
+`DISPLAYD /AMDPROFILE` explicitly runs the fixed 256x128 fill/copy scene on
+an AMD DEVICE_V1 backend. `/AMDPROFILE SOFTWARE` selects the same dimensions
+and colors on the CPU. The diagnostic reuses images and pipelines, verifies
+all 32768 output pixels, and waits for exact resource retirement. It reports
+upload, render, device copy and readback caller/wait wall intervals separately.
+Allocation and warm-up are excluded. These spans are not GPU timers or FPS;
+software copy labels describe the logical phases only. `/STATS`, `/STATE`
+and `/POWER` separately expose presentation receipts, budgets and telemetry.
+Physical qualification and the paired comparison belong to 0.80.39.
 
 ## Build
 
