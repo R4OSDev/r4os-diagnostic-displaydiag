@@ -184,6 +184,12 @@ bootfb recovery and release of the native BO and attachment lease.
 The runner verifies 16384 captured pixels in each of two QMP screenshots.
 These modes prove virtual device execution; they do not measure VBlank.
 
+`DISPLAYD /NVIDIASMOKE` runs two bounded32x16 CE/GR rounds through DEVICE_V1,
+checks exact readback pixels and steady-state resource balance, and rejects
+software backends. It does not present or query receivers. Initial driver
+cache growth is reported separately; full driver retirement remains required.
+The command is built; positive hardware qualification is still pending.
+
 `DISPLAYD /NVIDIA [text]` replays complete bounded NVIDIA driver boot records.
 An optional case-insensitive substring of up to 128 bytes selects relevant
 lines, e.g. `/NVIDIA boot-` or `/NVIDIA rejected`, to keep SSH output small.

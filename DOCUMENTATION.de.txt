@@ -3,6 +3,31 @@
 
 Ab R4OS 0.79.9 im Full-Profil enthalten; Diagnose startet nur auf Aufruf.
 
+NVIDIA-Kurzprobe (0.82.1 / DISPLAYD 0.1.48)
+-----------------------------------------
+DISPLAYD /NVIDIASMOKE verlangt einen aktiven NVIDIA-DEVICE_V1 mit CE und GR.
+Ab0.1.48 wartet die Diagnose vor Kalt- und Warmbilanz begrenzt1000ms auf
+allocation/destruction/retained=0. Der anschliessende vollstaendige
+Feldvergleich nach Runde2 bleibt unveraendert streng. Laufender asynchroner
+Abbau darf nicht als vermeintlicher Gleichgewichtswert eingefroren werden.
+Zwei begrenzte Runden pruefen je ein32x16-Pixel-Muster: Systemupload,
+native Kopie, separater Systemreadback sowie ein gerendertes Teilrechteck
+mit unveraendertem Rand. CPU-Blits dienen ausschliesslich dem Befuellen
+und Auslesen der Systempuffer. Jede GPU-Quittung muss terminal/complete,
+fehlerfrei und zur unveraenderten NVIDIA-Geraetegeneration gehoeren.
+Die erste Runde meldet moeglichen Cacheaufbau, die zweite verlangt
+ausgeglichene aktuelle BO-/Pin-/IRQ-/Work-Zaehler. Vollstaendiger Abbau
+der Treibercaches muss zusaetzlich beim Treiber-Shutdown nachgewiesen werden.
+Kein Present, Modeset oder Empfaengerabruf. Softwaregrafik gilt als Fehler,
+nicht als GPU-Nachweis. Jeder Auftrag und das Schliessen haben eine feste
+Frist; unklar gehaltene Ressourcen werden nicht als freigegeben gemeldet.
+Ab 0.1.47 zeigen Fehlvergleiche hoechstens vier Positionen mit Soll-, Ist-
+und Ursprungsfarbe sowie Gesamtzahlen fuer Abweichungen, unveraenderte und
+gefuellte Pixel. Pruefmuster, Quittungsregeln und RGB-Vergleich bleiben gleich.
+Hardware 172 bestaetigt CE und die GR-Quittung; alle 512 Pixel bleiben jedoch
+unveraendert. Das geforderte Teilrechteck liefert 153 Fehler. Die positive
+Hardwareabnahme bleibt offen.
+
 DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.40 prueft
 unter anderem den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte
 Regionen, acht geaenderte Pixel, einen externen DISPBLIT-Verbraucher, den

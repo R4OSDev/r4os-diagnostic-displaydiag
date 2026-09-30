@@ -393,6 +393,7 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
         return 0;
     }
     if (std.ascii.eqlIgnoreCase(args, "/AMDIMAGE")) return @import("amd_images.zig").run(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/NVIDIASMOKE")) return @import("nvidia_smoke.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/AMDRENDER")) return @import("amd_render.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/AMDCOMPILER")) return @import("amd_compiler.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/COMPILER")) return @import("compiler.zig").run(r4_app);
