@@ -19,7 +19,7 @@ fn find(ctx: *const r4os.gfx_outputs.Context, adapter: u32) ?a.GfxOutputInfo {
     }
     return null;
 }
-pub fn inventory(app: *r4os.App) i32 {
+pub fn inventory(app: *r4os.App, dump_raw: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return a.err_no_group;
     const ctx = draw.outputs();
@@ -120,9 +120,17 @@ pub fn inventory(app: *r4os.App) i32 {
         if (info.edid_bytes == 0) { sys.println("    EDID unavailable; receiver power state unknown"); continue; }
         gfx.readReceiver(&ctx, &info, &raw, &receiver) catch |err| {
             if (err == error.Stale) return catalogChanged(&sys);
+            // A parser rejection follows a complete, identity-checked read.
+            // Preserve those diagnostic bytes, including bad checksums. API
+            // read failures and invalid lengths never export partial storage.
+            if (dump_raw) switch (err) {
+                error.InvalidBase, error.InvalidLength, error.TooLarge, error.Capacity => dumpRaw(&sys, &info),
+                else => { sys.write("DISPLAYD EDID read failed: "); sys.println(@errorName(err)); return 1; },
+            };
             sys.write("    EDID status="); sys.println(@errorName(err));
             continue;
         };
+        if (dump_raw) dumpRaw(&sys, &info);
         sys.write("    EDID vendor="); sys.write(&receiver.manufacturer);
         sys.write(" name="); sys.write(std.mem.sliceTo(&receiver.name, 0));
         sys.write(" extensions="); sys.printU64(receiver.valid_extensions); sys.putc('/'); sys.printU64(receiver.declared_extensions);
@@ -143,6 +151,32 @@ pub fn inventory(app: *r4os.App) i32 {
     if (ctx.revision(&after) != ok or after.revision != before.revision) return catalogChanged(&sys);
     sys.println("DISPLAYD receivers: complete hardware-writes=none");
     return 0;
+}
+fn dumpRaw(sys: *const r4os.r4sys.Context, info: *const a.GfxOutputInfo) void {
+    const bytes = raw[0..info.edid_bytes];
+    var line: [256]u8 = undefined;
+    sys.println(std.fmt.bufPrint(&line,
+        "DISPLAYD EDID begin adapter={d} port={d} device={d} receiver={d} revision={d} bytes={d} flags={d}",
+        .{ info.identity.adapter_id, info.identity.connector_id, info.identity.device_generation,
+            info.identity.connection_generation, info.topology_revision, bytes.len, info.flags }) catch unreachable);
+    for (0..bytes.len / 128) |block| {
+        const data = bytes[block * 128 ..][0..128];
+        var checksum: u8 = 0;
+        for (data) |byte| checksum +%= byte;
+        sys.println(std.fmt.bufPrint(&line, "DISPLAYD EDID block={d} checksum={x:0>2} tag={x:0>2}",
+            .{ block, checksum, data[0] }) catch unreachable);
+        for (0..4) |row| {
+            const offset = block * 128 + row * 32;
+            const hex = std.fmt.bytesToHex(bytes[offset..][0..32].*, .lower);
+            sys.println(std.fmt.bufPrint(&line, "DISPLAYD EDID data={x:0>4}:{s}", .{ offset, hex }) catch unreachable);
+        }
+    }
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash(bytes, &digest, .{});
+    sys.println(std.fmt.bufPrint(&line, "DISPLAYD EDID end bytes={d} sha256={s}",
+        .{ bytes.len, std.fmt.bytesToHex(digest, .lower) }) catch unreachable);
+    // Only the enclosing final catalog marker confirms that all exported
+    // receivers still belong to one revision; a later Stale invalidates all.
 }
 fn catalogChanged(sys: *const r4os.r4sys.Context) i32 {
     sys.println("DISPLAYD receivers: catalog changed; repeat the complete read");

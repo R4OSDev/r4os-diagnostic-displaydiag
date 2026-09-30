@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.60`
+- Version: `0.1.61`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -186,6 +186,20 @@ counts, colors and audio facts. Receiver-only entries have no source/modeset
 qualification. A changing catalog requests a fresh complete read; missing EDID
 does not identify the monitor power state. This command never submits a frame
 or performs PCI, DDC or GPU accesses.
+
+`/RECEIVERS /RAW` additionally prints every captured EDID block without
+alteration, including invalid checksums, with receiver identity, catalog
+revision, byte offsets and SHA-256. Only the final coherent catalog marker
+completes the capture. A stale generation or failed block read invalidates
+the transcript; this does not trigger fresh bus acquisition.
+
+`Tools/ExportReceiverCapture.ps1 -TranscriptPath <capture.txt>
+-OutputDirectory <new-directory>` validates that transcript and exports
+the original binary blocks, their metadata and a copy of the transcript.
+It rejects missing/reordered bytes, changed identities and hash mismatches
+before creating output. Missing extensions remain missing; bad checksum
+bytes are preserved. A firmware snapshot is explicitly identified and
+does not qualify current HDMI transport or the receiver's power state.
 
 `/OUTPUTS` checks the fixed firmware connector, exact boot geometry and
 EDID availability, rejects invalid composite state without device changes,
