@@ -4,13 +4,38 @@
 
 ## Package
 
-- Version: `0.1.44`
+- Version: `0.1.60`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
+
+Version60 additionally opens two native COPY-only queues on NVIDIA185. Six
+CE0 jobs compare three distinct patterns and complete readback guards; the
+first queue must retire native resources before the second executes again.
+Driver receipts independently identify the shared context/method storage and
+distinct channel/FIFO/USERD ownership. Build6/6 and SMP4/KVM60.24s pass.
+Physical185/60 passes265CE/27native/8images/73138772 exact bytes with full
+settled balance and no reset. The two channels share context0:3/methods20KB,
+with CHID24/32 and2/4 completed jobs. Archive physical185. NVIDIA186 repeats this complete matrix and qualifies
+private control initial clear in its driver before backend publication; its
+normal post-GPU restart and fresh short CE/GR probe pass (physical186).
+
+Version59 extends `/NVIDIAMEM` with whole-allocation raw VA copies around
+the eight existing image cases. It fills all native bytes with A5 before
+logical writes and then compares every pixel byte, GOB/pitch padding byte,
+64KB plane tail and readback guard against an independent Mesa TuringColor2D
+coordinate oracle. The existing host unit-test step checks its fixed original
+sector table. These checks target native VA representation under the MMU
+kind; they are not a direct physical memory-controller dump. Physical59 on
+NVIDIA184 passes265 canonical CE/21 native jobs,8 images and73077332 exact
+bytes, including653694 native padding bytes and32768 guard bytes. Complete
+500ms settled balance and no reset are confirmed. Build6/6, unchanged oracle
+unit-test5/5steps3/3 and fresh SMP4/KVM60.53s pass. Version58 had requested
+non-page-aligned system VA bindings and was rejected before raw GPU work;
+59 allocates a complete logical guard page and preserves the failing API code.
 
 `DISPLAYD /AMDCOMPILER` runs the loaded optional R4ACO compiler in real
 R4SYS workers. It compiles six SPIR-V graphics/compute/texture fixtures, records
@@ -188,7 +213,69 @@ These modes prove virtual device execution; they do not measure VBlank.
 checks exact readback pixels and steady-state resource balance, and rejects
 software backends. It does not present or query receivers. Initial driver
 cache growth is reported separately; full driver retirement remains required.
-The command is built; positive hardware qualification is still pending.
+NVIDIA178/Kernel235 pass both rounds and subsequent clean ordinary reboots
+on OssiPC; output and manual display qualification remain separate.
+
+`DISPLAYD /NVIDIAMEM` (0.1.60) uses the public native allocation and device
+execution queue for raw VRAM transfers. It checks odd offsets and lengths,
+31 readback guard bytes, and two patterns through the same system BO after
+its original reference closes. The large system BO contains 34 MB plus
+123 bytes (8705 pages); one native working buffer tries at most three shrinking sizes: 8 MB,
+1 MB and 64 KB, each plus 5 bytes. Only an acknowledged OOM permits the
+next candidate; other failures stop the probe. All its contents pass through GPU upload/readback in bounded parts.
+A separate 64-MB native request must report OOM on the qualified GA106 heap,
+followed by exact GPU work in the same epoch and a balanced resource count.
+If another GPU can allocate that request, `OomNotReached` explicitly leaves
+that criterion unqualified. This is an opt-in physical probe; software
+backends fail before allocation. Version52 additionally spawns a bounded child that creates a patterned BO.
+The parent imports the same BO and retains an explicit partial GPU mapping,
+checks a CPU mapping across a page boundary, and copies before and after the
+child is killed and reaped. The old producer reference must become stale while
+the held GPU binding stays unchanged; child mappings retire before the range.
+On physical180, all228 CE jobs and71377492 exact bytes pass, including
+copies before/after child kill/reap. Final balance fails with a driver-side
+mapping collection Retained error; this is not a passed lifetime acceptance.
+NVIDIA181 removes that fatal retirement error; version52 then reveals a
+premature baseline containing two warm-up mappings. Version53 waits for all
+BO counters to remain identical for500ms with no pending/retained bytes;
+exact before/after equality remains mandatory. Both the warm and fresh-boot
+physical53 runs pass all228 CE jobs and71377492 exact bytes, with identical
+BO/runtime counts and no reset. Normal181 shutdown releases all resources;
+the restart returns after70.864 seconds without Wake-on-LAN.
+
+Version55 adds eight129x41 XRGB/ARGB/NV12/P010 cases, each linear and
+blocklinear. Frozen GA106 expectations check pitch, plane offsets, modifier,
+alignment and size. Full rows and odd inner rectangles pass through CE into
+separate system readback; all system row guards, plane gaps and tail bytes
+are compared. These logical round trips do not independently prove native
+GOB byte order or padded tail rows; explicit-VA raw copies cover that next.
+Version54 incorrectly requested pitch bytes as logical row width; the common
+owner correctly rejected the first image upload before a new GPU job.55 uses
+the actual129/130-column plane widths and preserves the full system guards.
+Physical55 passes all eight image cases:264 CE jobs,72180308 exact bytes
+and identical settled BO/runtime counts, no fatal/reset/retained resources.
+Build6/6, SMP4/KVM60.74s and full installed hash passed.
+Version56 adds five native CE pushes through public explicit-VA bindings:
+a16KB known pattern seeded by canonical CE, two system sources remapped at
+the same VA, unaligned copies and complete separate readback guards. Every
+push checks its own CE semaphore and the driver's device-execution fence;
+its native producer queue and all child mappings retire before final balance.
+Physical56 exposed the corrected NVIDIA183 GR/CE topology bug, then a real
+XID13 because the public CE encoder used subchannel0 alongside GR. Version57
+requires the new R4NV16 encoding feature and selects CE subchannel4.
+Physical57 passes all265 canonical CE and5 native VA jobs,8 logical images,
+72241748 exact bytes and identical settled BO/runtime balance without reset.
+The previous183/56 XID13 retirement stalls atFIFO0 and requires a poweroff
+and one Wake. NVIDIA184 fixes that reset-retirement defect: the same actual
+XID13 retires all resources during headless terminal shutdown, ordinary reboot
+returns in68.1223261s without Wake and fresh CE/GR work passes. Version59
+adds the raw GOB/padding proof above. Shared-context hardware channels and
+private initial-clear pattern checks remain open.
+NVIDIA179 physically handles
+the 49/50 allocation denials without losing the GPU or retaining resources;
+CE/GR work after denial passes. On OssiPC,51 completes222 CE jobs and
+71352844 exact byte checks across8705 pages using1MB+5 native storage,
+including OOM/follow-up and full BO/runtime balance.
 
 `DISPLAYD /NVIDIA [text]` replays complete bounded NVIDIA driver boot records.
 An optional case-insensitive substring of up to 128 bytes selects relevant

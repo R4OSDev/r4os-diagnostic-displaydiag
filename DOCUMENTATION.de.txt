@@ -3,6 +3,99 @@
 
 Ab R4OS 0.79.9 im Full-Profil enthalten; Diagnose startet nur auf Aufruf.
 
+NVIDIA-Speicherprobe (0.82.3 / DISPLAYD 0.1.58)
+----------------------------------------------
+DISPLAYD /NVIDIAMEM verwendet die oeffentlichen nativen BO-/Queue-APIs.
+58 ergaenzt die acht Bildfaelle um rohe VA-Kopien: gesamter nativer
+Speicher zuerstA5, dann logische Bild-/Teilrechteckschreibungen und ein
+vollstaendiger unabhaengiger Vergleich von GOB-/Pitch-/Plane-Padding samt
+System-Randbytes. Die TuringColor2D-Inversabbildung folgt der gepinnten
+Mesa-Originaltabelle, nicht dem Treiber-Layoutplaner. Der vorhandene
+unit-test-Einstieg prueft diese Tabelle, GOB-/Tilegrenzen und ungueltige
+Layouts;3/3Tests bestehen. Build6/6 bestanden, physische58-Abnahme offen.
+Geprueft wird die nativeVA-Darstellung unter dem MMU-Kind, kein direkter
+Speichercontroller-Busdump. Quellhinweise und volle MIT-Lizenz liegen in
+Licenses/NVIDIA-GOB-MIT.txt und sind im Modul eingebettet.
+Die begrenzte Rohspeicherprobe prueft System-BOs mit 8197 Bytes und
+34 MB plus 123 Bytes (8705 Seiten). Der native Arbeitspuffer bleibt auf
+8 MB plus 5 Bytes begrenzt. Bei quittiertem OOM folgen hoechstens zwei
+kleinere Kandidaten: 1 MB plus 5 Bytes und 64 KB plus 5 Bytes. Andere
+Fehler brechen ab. Alle Daten durchlaufen die GPU in Teilkopien.
+Danach folgen frische kleine Mappings. Je zwei Muster
+durchlaufen volle und ungerade Kopien mit getrenntem Readback; 31 Randbytes
+bleiben unveraendert. Die zweite Runde nutzt denselben BO nach Ende seiner
+urspruenglichen Referenz. Das ist kein Nachweis eines beendeten Prozesses.
+Jeder Auftrag verlangt echte device-execution-Completion, unveraenderte
+Generationen und bestaetigte Ressourcenfreigabe. Native Allokationen behalten
+ihre ungerade logische Laenge und melden 64-KB-Ausrichtung. Die abschliessende
+BO-/IRQ-/Work-Bilanz muss zum warmen Ausgang passen. Kein Present, TV-Abruf
+oder CPU-Mapping von VRAM; Softwaregrafik wird vor der Probe abgewiesen.
+Eine getrennte native 64-MB-Anfrage muss auf dem qualifizierten GA106-Heap
+mit OOM abgewiesen werden. Danach muessen echte Kopien in derselben
+GPU-Sitzung und der Bilanzvergleich bestehen. Falls eine andere GPU diese
+Anfrage annimmt, bleibt das Kriterium mit OomNotReached ausdruecklich offen.
+NVIDIA179 behandelt die echten49/50-Ablehnungen inzwischen als OOM ohne
+Quarantaene/Retention; anschliessende CE-/GR-Arbeit besteht. Physisch51
+besteht222CE-Auftraege und71352844exakte Bytes ueber8705Seiten mit1MB+5
+nativem Arbeitspuffer, OOM/Folgearbeit und vollstaendiger Bilanz. Bildlayouts,
+mehrere Hardwarechannels, GPU-Fehler/Reset und Prozessende bleiben weitere
+Faelle aus 0.82.3.
+
+52 ergaenzt einen echten Kindproduzenten (/NVIDIAMEMCHILD, nur intern):
+12293Bytes mit bekanntem Muster, gleicherBO-Import beim Elternprozess,
+explizite8KB-GPU-Teilabbildung ab4KB und82Byte-CPU-Teilmap ab4093.
+Nach ersten echten Kopien folgt Kill/Reap(-9). Die urspruengliche Referenz
+muss stale sein, die gehalteneGPU-Bindung unveraendert; weitere echte
+Kopien muessen bytegleich bleiben. Teilabbildung vor ihrerVA-Range abbauen.
+Der allein gestartete Kindfall endet spaetestens nach20Sekunden und gilt
+nie als bestandene Abnahme. Physisch52 auf NVIDIA180 liefert vor/nach
+Kind-Kill/Reap exakte Daten (gesamt228CE/71377492Bytes), scheitert aber
+abschliessend mit host/mapping Retained an der gemeinsamen Collection.
+Die Lebensdauerabnahme bleibt damit offen; NVIDIA181 adressiert den
+nachgewiesenen Abbaufehler. Teilalias-Existenz ist noch kein Nachweis einer
+GPU-Ausfuehrung durch genau diese explizite VA.
+NVIDIA181 beseitigt den fatalen Abbaufehler physisch. Die52-Bilanz enthaelt
+nun vor dem Lauf noch zwei Warmup-Mappings (24KB), die nachher korrekt
+fehlen.53 verlangt deshalb500ms unveraenderte vollstaendige BO-Zaehler bei
+pending/retained0, bevor ein Snapshot gilt; exakte Endgleichheit bleibt
+Pflicht.53 besteht physisch vor und nach normalem Neustart jeweils alle
+228 CE-Auftraege und 71377492 exakten Bytes einschliesslich Kind-Kill/Reap.
+Vorher/nachher:40 BOs,41 Referenzen,61 Leases,66285568 RAM-Bytes,
+21168128 Device-Bytes,122880 gemappte Bytes; auch Runtimebilanz identisch.
+NVIDIA181 baut normal vollstaendig ab; SSH kehrt nach70.864 Sekunden ohne
+Wake-on-LAN zurueck.
+
+55 ergaenzt acht129x41-Faelle: XRGB/ARGB/NV12/P010, jeweils linear und
+blocklinear. Feste GA106-Erwartungen pruefen Pitch, Plane-Offsets, Modifier,
+Ausrichtung und Laenge. Ganze Zeilen und ungerade innere Rechtecke laufen
+ueber CE in einen getrennten Systemreadback. Alle System-Randbytes,
+Plane-Zwischenraeume und Zeilenluecken werden verglichen. Der Roundtrip
+belegt noch keine unabhaengige physische GOB-Byteordnung oder native
+Padding-Zeilen; dafuer folgt ein expliziter VA-/Raw-CE-Fall. Physische55-
+Abnahme, gemeinsamer Kontext mit zwei Channels, Remap/TLB und echter
+GSP-Fehlerfall bleiben offen.54 wurde vor dem ersten Bildauftrag korrekt
+abgewiesen, weil Pitchbytes die logische Bildbreite ueberschritten.55
+verwendet129/130 Spalten je Plane und behaelt den ganzen Randvergleich.
+Physisch55 bestehen alle acht Faelle mit264 CE/72180308 exakten Bytes und
+identischer ruhender BO-/Runtimebilanz, ohne Fatal/Reset/Retention.
+Build6/6, SMP4/KVM60.74s und voller installierter Hash sind bestaetigt.
+56 ergaenzt fuenf native CE-Auftraege ueber oeffentliche explizite GPU-VA:
+bekanntes16KB-Muster aus regulaerer CE, Umbelegung derselben VA vonA aufB,
+ungerade Kopien und vollstaendiger Systemreadback. Jede Kopie verlangt ihre
+eigene CE-Semaphore und die Common-Queue-Hardwarecompletion. Eigene Queue,
+Kindmappings, Ranges und BOs werden vor Endbilanz freigegeben.
+56 deckte zuerst die mitNVIDIA183 korrigierte GR/CE-Topologie auf und
+danach einen echten XID13 durch CE auf GR-Subchannel0.57 verlangt die neue
+R4NV16-Faehigkeit und waehlt ausdruecklich CE-Subchannel4. Physisch bestehen
+265 regulaere CE- und5 native VA-Jobs,8 logische Bilder und72241748 exakte
+Bytes mit identischer ruhender BO-/Runtimebilanz, ohne Reset. Der vorherige
+183/56-Fehlerabbau bleibt dagegen anFIFO0 stehen und fuehrt zum Poweroff;
+ein Wake stellt den Fernzugriff wieder her. NVIDIA184 korrigiert den
+Alias-/Collectorzyklus und besteht denselben echten Fehlerabbau beim
+regulaeren Neustart in68.1223261s ohneWake; frische8CE/2GR/2048exaktePixel
+und ruhendeBilanz folgen. Native GOB-/Paddingbelege und gemeinsame
+Kontexte bleiben offen.
+
 NVIDIA-Kurzprobe (0.82.1 / DISPLAYD 0.1.48)
 -----------------------------------------
 DISPLAYD /NVIDIASMOKE verlangt einen aktiven NVIDIA-DEVICE_V1 mit CE und GR.
@@ -24,9 +117,12 @@ Frist; unklar gehaltene Ressourcen werden nicht als freigegeben gemeldet.
 Ab 0.1.47 zeigen Fehlvergleiche hoechstens vier Positionen mit Soll-, Ist-
 und Ursprungsfarbe sowie Gesamtzahlen fuer Abweichungen, unveraenderte und
 gefuellte Pixel. Pruefmuster, Quittungsregeln und RGB-Vergleich bleiben gleich.
-Hardware 172 bestaetigt CE und die GR-Quittung; alle 512 Pixel bleiben jedoch
-unveraendert. Das geforderte Teilrechteck liefert 153 Fehler. Die positive
-Hardwareabnahme bleibt offen.
+Historischer Fehler mit NVIDIA172: CE und GR-Quittung waren vorhanden, aber
+alle 512 Pixel blieben unveraendert (153 Fehler im geforderten Teilrechteck).
+Seit NVIDIA178/Kernel235 ist die Grundabnahme aus0.82.1 bestanden: je8CE/2GR,
+2048exaktePixel und zwei normale Neustarts mit sauberem Abbau ohneWake.
+Die anschliessenden Firmwarefehler aus0.82.2 bestaetigen erneut beide
+kanonischen GPU-Folgestarts. Native Ausgabe bleibt davon getrennt offen.
 
 DISPLAYD.R4X ist die Display- und Present-Diagnose. Version 0.1.40 prueft
 unter anderem den kanonischen XRGB32-Regionsvertrag: genau zwei weit getrennte

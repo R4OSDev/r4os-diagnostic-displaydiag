@@ -18,5 +18,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/scenes.zig"),
         .target = b.graph.host,
     }) });
-    b.step("unit-test", "Check bounded scene geometry and sample statistics").dependOn(&b.addRunArtifact(tests).step);
+    const unit = b.step("unit-test", "Check bounded scene geometry, statistics and native GOB oracle");
+    unit.dependOn(&b.addRunArtifact(tests).step);
+    const gob = b.addTest(.{ .root_module = b.createModule(.{
+        .root_source_file = b.path("src/nvidia_gob.zig"),
+        .target = b.graph.host,
+    }) });
+    unit.dependOn(&b.addRunArtifact(gob).step);
 }

@@ -1,7 +1,7 @@
 R4OS_MODULE_MANIFEST=2
 KIND=R4X
 NAME=DISPLAYD
-VERSION=0.1.48
+VERSION=0.1.60
 LANGUAGE=Zig
 SOURCE=src/main.zig
 ENTRY_MODE=app
@@ -26,6 +26,7 @@ ZIG_MODULE=r4gfx:../../Libraries/R4GFX/Bindings/Zig/r4gfx_abi.zig
 ZIG_MODULE=r4gfx_queue:../../Libraries/R4GFX/Bindings/Zig/queue.zig
 META=app.role=diagnostic
 META=diagnostic.name=DISPLAYD
+RESOURCE=NVIDIA-GOB-MIT.txt:Licenses/NVIDIA-GOB-MIT.txt
 ZIG_MODULE=r4gfx_edid:../../Libraries/R4GFX/Display/edid.zig
 ZIG_MODULE=r4gfx_outputs:../../Libraries/R4GFX/Bindings/Zig/outputs.zig
 ZIG_MODULE=r4nv:../../Libraries/R4NV/Bindings/Zig/r4nv.zig
