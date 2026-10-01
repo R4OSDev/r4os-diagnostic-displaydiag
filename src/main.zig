@@ -395,6 +395,8 @@ pub fn r4_app_main(r4_app: *r4os.App) i32 {
     if (std.ascii.eqlIgnoreCase(args, "/AMDIMAGE")) return @import("amd_images.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/NVIDIASMOKE")) return @import("nvidia_smoke.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/NVIDIACOPY")) return @import("nvidia_copy.zig").run(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/NVIDIARENDER")) return @import("nvidia_render.zig").run(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/NVIDIASCENE")) return @import("nvidia_scene.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/NVIDIAMEM")) return @import("nvidia_memory.zig").run(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/NVIDIAMEMCHILD")) return @import("nvidia_memory.zig").child(r4_app);
     if (std.ascii.eqlIgnoreCase(args, "/AMDRENDER")) return @import("amd_render.zig").run(r4_app);

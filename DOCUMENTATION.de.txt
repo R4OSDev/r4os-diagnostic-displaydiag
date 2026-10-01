@@ -1,6 +1,27 @@
 ﻿DISPLAYD.R4X
 ============
 
+0.82.10 / DISPLAYD67 / 01.10.2026:
+/NVIDIARENDER prueft die14 unveraenderten CPU/f64-Referenzen aus R4NV jeweils
+linear und blocklinear. Oeffentliches image_prepare, render_submit und
+abhaengiger Readback liefern28GR/82CE und87808 verglichene Bytes. Alle28
+Quell-/Zielreferenzen werden bereits bei laufender Arbeit geschlossen.
+Nearest,1:1,Solid und unberuehrte Pixel sind exakt; Filter/Alpha/sRGB bleiben
+innerhalb der urspruenglichen0..3LSB-Grenzen. System-Pitch/Randbytes werden
+exakt geprueft; daraus folgt kein neuer Rohbeleg nativer GR-Paddingbytes.
+/NVIDIASCENE nutzt dieselben drei Fill/Blit/OVER-Kommandos fuer CPU und GPU,
+beide Layouts und6GR/6CE/6272Bytes. Hoechstens1LSB ist nur bei OVER erlaubt.
+Vier32x24-BGRA-Bilder samt64Randbytes liegen unter C:\TEMP\NVSC-*.RAW fuer
+den spaeteren Sichtvergleich. Budget0-Konvertierung, ungueltige Praeferenz
+und zwei unbekannte Modifier muessen ohne Ausgabeaenderung/Allokation
+scheitern. Beide Diagnosen verlangen vollstaendigen BO-/Runtimeabbau und
+erreichen auf Softwaregrafik keinen bestandenen GPU-Nachweis. Sie starten
+nur ausdruecklich, ohne Empfaengerabfrage oder Present. Physische Einzel-
+belege65/67, die bestaetigte Vulkan-Abbaukorrektur190 und die erfolgreichen
+Wiederholungen nachRender-Timeout/FLR191 liegen im Archiv
+ExFiles/Reports/OssiGPU/20261001-render08210/Final08210.
+Die manuelle Sichtabnahme in0.82.38 bleibt offen.
+
 0.82.9 / NVIDIA189 / Kernel236 / DISPLAYD64 / 01.10.2026:
 /BUFFERS wartet seit62 hoechstens1000ms auf asynchronen Abbau und vergleicht
 weiterhin alle BO-Zaehler. Physisch bestanden: backend2,48Copybytes/zwei

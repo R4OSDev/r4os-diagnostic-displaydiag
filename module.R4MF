@@ -1,7 +1,7 @@
 R4OS_MODULE_MANIFEST=2
 KIND=R4X
 NAME=DISPLAYD
-VERSION=0.1.64
+VERSION=0.1.67
 LANGUAGE=Zig
 SOURCE=src/main.zig
 ENTRY_MODE=app
@@ -36,3 +36,4 @@ ZIG_MODULE=r4amd:../../Libraries/R4AMD/Bindings/Zig/r4amd.zig
 ZIG_MODULE=r4aco:../../Libraries/R4ACO/Bindings/Zig/r4aco.zig
 ZIG_MODULE=r4aco_worker:../../Libraries/R4ACO/Bindings/Zig/worker.zig
 ZIG_MODULE=r4aco_shaders:../../Libraries/R4ACO/Bindings/Zig/shaders.zig
+ZIG_MODULE=r4nv_reference:../../Libraries/R4NV/Source/render_reference_cases.zig

@@ -4,13 +4,30 @@
 
 ## Package
 
-- Version: `0.1.64`
+- Version: `0.1.67`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
+
+`DISPLAYD /NVIDIARENDER` compares actual offscreen GPU readback with the
+14 frozen CPU/f64 reference images supplied by R4NV. Each scene runs with
+linear and blocklinear images through public image preparation, render
+submission and dependent readback. Caller references close while work is
+pending. The probe checks all 87808 logical pixel, system pitch and guard
+bytes within the original per-scene tolerances, then requires complete BO
+and runtime retirement. It does not inspect raw native padding.
+
+`DISPLAYD /NVIDIASCENE` sends the same fill, blit and source-over commands
+through software and native R4GFX consumers for both layouts. It compares
+6272 bytes, allowing one LSB only in blended pixels, and saves four bounded
+raw BGRA readbacks under `C:\TEMP\NVSC-*.RAW` for the later visual comparison.
+Unsupported modifiers, forced conversion with a zero budget and an invalid
+preference must preserve outputs and allocation counters. Both NVIDIA probes
+require the native backend, run only on explicit request and neither query
+a receiver nor present an image.
 
 `DISPLAYD /NVIDIACOPY` explicitly requires a live NVIDIA backend and runs
 three public BO/queue layout cases followed by a shared-raster R4GFX case.
