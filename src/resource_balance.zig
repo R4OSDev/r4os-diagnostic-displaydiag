@@ -60,3 +60,17 @@ pub fn buffers(sys: *const r4os.r4sys.Context, before: r4os.abi.GfxBufferStats, 
     }
     return passed;
 }
+
+// Public references can end before the driver's asynchronous RM destruction
+// and idle mapping eviction. Still require every live counter to return to
+// its original value, with a finite deadline and the final mismatch report.
+pub fn waitBuffers(sys: *const r4os.r4sys.Context, memory: *const r4os.gfx_buffers.Context, before: r4os.abi.GfxBufferStats) bool {
+    const limit = sys.ticks() +| sys.ticksFromMilliseconds(1000);
+    var after: r4os.abi.GfxBufferStats = .{};
+    while (true) {
+        if (memory.stats(&after) != r4os.abi.gfx_buffer_result_ok) return false;
+        if (std.meta.eql(before, after) or sys.ticks() >= limit) break;
+        sys.sleepTicks(1);
+    }
+    return buffers(sys, before, after);
+}

@@ -4,13 +4,36 @@
 
 ## Package
 
-- Version: `0.1.61`
+- Version: `0.1.64`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
 
 The manifest is the single source of truth for the artifact, imports, image
 target, and package metadata.
+
+`DISPLAYD /NVIDIACOPY` explicitly requires a live NVIDIA backend and runs
+three public BO/queue layout cases followed by a shared-raster R4GFX case.
+The dependent RAM-to-VRAM-to-VRAM-to-RAM copies transfer 69 bytes over 19
+rows, preserve system guards, and reuse each allocation for two patterns.
+The queue explicitly reserves three concurrent slots. Linear and blocklinear
+129x41/193x41 images use offsets (57,3)/(93,9); an additional 129x21 image
+at (57,2) exercises the public allocator's automatic GOB-height 1-to-2
+transition. The older model's forced 41-row/GOB-height1 layout is not
+available through this public allocation interface.
+
+Four simultaneous raster leases cover two immutable generations. The
+diagnostic requires one import per generation, separate BO identities,
+exact GPU readback after producer/frame/lease release, and complete BO and
+runtime retirement. Raw-row completion bytes, R4GFX counters and caller CPU
+initialization/comparison bytes are reported separately. Invalid raw-tiled
+and stride requests must fail at admission. It never queries a receiver or
+presents a frame, and a software backend cannot pass.
+
+Since version62, `/BUFFERS` waits at most 1000ms for asynchronous native
+destruction and idle mapping eviction before checking every live BO counter.
+This fixes premature failure after successful native copies without allowing
+retained resources or omitting counters.
 
 Version60 additionally opens two native COPY-only queues on NVIDIA185. Six
 CE0 jobs compare three distinct patterns and complete readback guards; the

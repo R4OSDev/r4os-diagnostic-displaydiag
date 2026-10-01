@@ -11,12 +11,10 @@ pub fn run(app: *r4os.App, require_driver: bool) i32 {
     const library = gfx.ApiV1Client.init(app.startContext()) catch return 1;
     const render = gfx.RenderV1Client.init(app.startContext()) catch return 1;
     var before: a.GfxBufferStats = .{};
-    var after: a.GfxBufferStats = .{};
     var passed = buffers.stats(&before) == ok and exercise(&sys, &buffers, &library, &render);
     passed = passed and @import("render_resources.zig").run(app);
     passed = passed and @import("native_allocation.zig").run(app);
-    passed = buffers.stats(&after) == ok and passed;
-    passed = @import("resource_balance.zig").buffers(&sys, before, after) and passed;
+    passed = @import("resource_balance.zig").waitBuffers(&sys, &buffers, before) and passed;
     sys.println(if (passed) "DISPLAYD software-buffer: OK" else "DISPLAYD software-buffer: FAILED");
     if (require_driver) {
         for ([_][]const u8{

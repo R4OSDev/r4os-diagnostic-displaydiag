@@ -1,6 +1,22 @@
 ﻿DISPLAYD.R4X
 ============
 
+0.82.9 / NVIDIA189 / Kernel236 / DISPLAYD64 / 01.10.2026:
+/BUFFERS wartet seit62 hoechstens1000ms auf asynchronen Abbau und vergleicht
+weiterhin alle BO-Zaehler. Physisch bestanden: backend2,48Copybytes/zwei
+Abschluesse/eineAbhaengigkeit/16Pixel und native image_prepare.
+/NVIDIACOPY: drei oeffentliche BO-Queue-Faelle mit je zwei Mustern sowie vier
+R4GFX-Raster-Leases ueber zwei Generationen;20CE/12Abhaengigkeiten,
+23930exakteBytes/23726Copybytes und kompletter BO-/Runtimeabbau. Genau drei
+Queueslots. GOB1/2 braucht wegen automatischer Layoutwahl129x21/Ursprung57,2;
+129x41/193x41 laufen linear und GOB2/2. Kein identischer physischer Nachweis
+des intern erzwungenen41-Zeilen/GOB1-Modells behauptet. Frische SMP4-Software-
+buffers, Desktop ohne/mit inkompatiblem R4NV und R4GFX-Provider bestanden.
+64 baut6/6; unveraenderter /BUFFERS-Code aus63, nativer Zweig physisch
+geprueft. Diagnosefehler61/62/63 separat erhalten. Nur expliziter Aufruf,
+keine Empfaengerabfrage/Present. Details Docs/Drivers/GrafikCopy07918.txt,
+Archiv ExFiles/Reports/OssiGPU/20261001-copy08209.
+
 0.82.4 / NVIDIA 187 / DISPLAYD 61 / 01.10.2026:
 HDMI-/EDID-Softwarevorbereitung technisch abgeschlossen. Letzte Antwort und
 letzte Ablehnung behalten Phase, Befehl, DDC-Block, RPC-/RM-Status,
