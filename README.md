@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.67`
+- Version: `0.1.68`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -161,7 +161,11 @@ allocations. Missing native reports are unavailable, including on bootfb.
 The optional R4DRAW slot requires Kernel 0.1.162 or later; an older kernel
 leaves the rest of DISPLAYD usable.
 
-`DISPLAYD /BASELINE` runs bounded CPU reference scenes in RAM. Add `/PRESENT`
+`DISPLAYD /BASELINE` runs bounded CPU reference scenes in RAM. Without an active
+output, use `/SIZE=800x600` (or another bounded explicit size); this CPU-only
+path neither requires a present backend nor submits images. `/SIZE` and
+`/PRESENT` are mutually exclusive. Without `/SIZE`, the current display geometry
+must remain stable throughout the run. Add `/PRESENT`
 to submit diagnostic images to the active screen, `/SAMPLES=1..64` to select
 the sample count (default 32), and `/SAVE=C:\TEMP\GFX.TXT` to save the report.
 `/TRACE` prints progress outside the measured phases. The baseline records

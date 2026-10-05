@@ -8,6 +8,8 @@ const Options = struct {
     trace: bool = false,
     samples: u32 = 32,
     save: []const u8 = "",
+    width: u32 = 0,
+    height: u32 = 0,
 };
 
 const Report = struct {
@@ -69,8 +71,9 @@ pub fn run(app: *r4os.App) i32 {
     const dev = app.devicesLowLevel() orelse return abi.err_no_group;
     const draw = app.drawing() orelse return abi.err_no_group;
     const options = parse(std.mem.span(sys.argsRaw())) orelse {
-        sys.println("DISPLAYD /BASELINE [/PRESENT] [/TRACE] [/SAMPLES=1..64] [/SAVE=C:\\TEMP\\REPORT.TXT]");
+        sys.println("DISPLAYD /BASELINE [/PRESENT | /SIZE=WIDTHxHEIGHT] [/TRACE] [/SAMPLES=1..64] [/SAVE=C:\\TEMP\\REPORT.TXT]");
         sys.println("No arguments: compatibility smoke. BASELINE: RAM scenes; PRESENT also writes diagnostic images to the screen.");
+        sys.println("SIZE selects bounded offscreen RAM geometry without an active output; incompatible with PRESENT.");
         return 2;
     };
     const allocator = sys.allocator();
@@ -105,9 +108,16 @@ fn parse(args: []const u8) ?Options {
         } else if (token.len > 6 and std.ascii.eqlIgnoreCase(token[0..6], "/SAVE=")) {
             options.save = token[6..];
             if (options.save.len >= 256) return null;
+        } else if (token.len > 6 and std.ascii.eqlIgnoreCase(token[0..6], "/SIZE=")) {
+            if (options.width != 0) return null;
+            var dimensions = std.mem.splitAny(u8, token[6..], "xX");
+            options.width = std.fmt.parseInt(u32, dimensions.next() orelse return null, 10) catch return null;
+            options.height = std.fmt.parseInt(u32, dimensions.next() orelse return null, 10) catch return null;
+            if (dimensions.next() != null or options.width < 8 or options.height < 8 or
+                @as(u64, options.width) * options.height > 16 * 1024 * 1024) return null;
         } else return null;
     }
-    return if (baseline) options else null;
+    return if (baseline and !(options.present and options.width != 0)) options else null;
 }
 
 fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.Context, options: Options, report: *Report) bool {
@@ -132,11 +142,23 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
         var line: [256]u8 = undefined;
         for (0..7) |index| report.line("{s}", .{status.line(&line, index)});
     }
-    const before = dev.displaySummary() orelse return false;
-    report.line("display-owner={s} mode={d}x{d}x{d} pitch={d} cache-policy={d}", .{ fixed(&before.backend_name), before.width, before.height, before.bpp, before.pitch, before.cache_policy });
+    const before = dev.displaySummary();
+    if (before) |display| {
+        report.line("display-owner={s} mode={d}x{d}x{d} pitch={d} cache-policy={d}", .{ fixed(&display.backend_name), display.width, display.height, display.bpp, display.pitch, display.cache_policy });
+    } else report.line("display-owner=unavailable; no active output", .{});
+    if (options.width == 0 and before == null) {
+        report.line("baseline needs /SIZE=WIDTHxHEIGHT for offscreen RAM scenes without an active output", .{});
+        return false;
+    }
+    const width = if (options.width != 0) options.width else before.?.width;
+    const height = if (options.height != 0) options.height else before.?.height;
+    const bpp: u16 = if (options.width != 0) 32 else before.?.bpp;
+    report.line("scene-geometry={d}x{d}x{d} source={s}", .{ width, height, bpp, if (options.width != 0) "explicit-offscreen" else "display-snapshot" });
     var caps: abi.DisplayPresentCapabilities = .{};
-    if (draw.displayPresentCapabilities(&caps) != 0) return false;
-    report.line("present-backend={s} fallback={s} kind={d} caps=0x{x} max-regions={d}", .{ fixed(&caps.backend_name), fixed(&caps.fallback_name), caps.backend_kind, caps.flags, caps.max_regions });
+    if (options.present) {
+        if (draw.displayPresentCapabilities(&caps) != 0) return false;
+        report.line("present-backend={s} fallback={s} kind={d} caps=0x{x} max-regions={d}", .{ fixed(&caps.backend_name), fixed(&caps.fallback_name), caps.backend_kind, caps.flags, caps.max_regions });
+    } else report.line("present-backend=not-queried; CPU-only scenes submit no output", .{});
     const software = caps.backend_kind == abi.display_present_backend_bootfb_cpu or caps.backend_kind == abi.display_present_backend_external_blit;
     const native = caps.backend_kind == abi.display_present_backend_native_cpu;
     report.line("gpu-timestamps=unavailable visible-present=unavailable scanout-completion=unavailable", .{});
@@ -152,8 +174,6 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     report.line("clock-source={d} generation={d} resolution-ns={d} source-hz={d} event-hz={d} flags=0x{x}", .{ clock_info.source, clock_info.generation, clock_info.resolution_ns, clock_info.source_frequency_hz, clock_info.event_effective_hz, clock_info.flags });
     const clock = Clock{ .sys = &sys, .generation = clock_info.generation, .source = clock_info.source };
     const started = clock.now() orelse return false;
-    const width = before.width;
-    const height = before.height;
     const pixel_count = @as(u64, width) * height;
     if (width < 8 or height < 8 or pixel_count > 16 * 1024 * 1024 or (options.present and ((!software and !native) or caps.max_regions < 4 or caps.flags & abi.display_present_cap_sync_fence == 0))) {
         report.line("baseline unsupported geometry/backend; no allocations or presents", .{});
@@ -177,18 +197,26 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
             sys.write("DISPLAYD baseline phase: ");
             sys.println(@tagName(scene));
         }
-        if (!measureScene(sys, dev, draw, clock, options, report, task_index, scene, source, output, width, height, (before.bpp + 7) / 8, started, &measured_bytes, &measured_frames)) return false;
+        if (!measureScene(sys, dev, draw, clock, options, report, task_index, scene, source, output, width, height, (bpp + 7) / 8, started, &measured_bytes, &measured_frames)) return false;
     }
     const elapsed = clock.elapsed(started) orelse return false;
-    const after = dev.displaySummary() orelse return false;
-    if (before.backend_kind != after.backend_kind or !std.mem.eql(u8, &before.backend_name, &after.backend_name) or
-        before.width != after.width or before.height != after.height or before.pitch != after.pitch)
-    {
-        report.line("measurement-invalid=backend-or-mode-changed", .{});
-        return false;
+    const after = dev.displaySummary();
+    // Explicit RAM geometry is independent of output availability. Inferred
+    // geometry and PRESENT still require the exact output snapshot to survive.
+    if (options.width == 0) {
+        const old = before orelse return false;
+        const current = after orelse return false;
+        if (old.backend_kind != current.backend_kind or !std.mem.eql(u8, &old.backend_name, &current.backend_name) or
+            old.width != current.width or old.height != current.height or old.pitch != current.pitch)
+        {
+            report.line("measurement-invalid=backend-or-mode-changed", .{});
+            return false;
+        }
     }
     report.line("duration-ns={d} successful-measured-presents={d} returned-pixels-times-bpp={d}", .{ elapsed, measured_frames, measured_bytes });
-    report.line("global-present-delta={d} global-byte-delta={d} scope=includes-other-producers-and-warmup", .{ after.present_count -| before.present_count, after.present_bytes_total -| before.present_bytes_total });
+    if (before) |old| {
+        if (after) |current| report.line("global-present-delta={d} global-byte-delta={d} scope=includes-other-producers-and-warmup", .{ current.present_count -| old.present_count, current.present_bytes_total -| old.present_bytes_total });
+    } else report.line("global-present-delta=unavailable global-byte-delta=unavailable", .{});
     report.line("resources=two-bounded-buffers-freed-on-every-return output-I/O=outside-measured-spans", .{});
     return true;
 }
