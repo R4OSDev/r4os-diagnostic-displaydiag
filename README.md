@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.69`
+- Version: `0.1.70`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
