@@ -67,7 +67,12 @@ pub const Probe = struct {
             if (info.phase == a.gfx_queue_phase_terminal and info.flags == 0) {
                 if (info.result != a.gfx_queue_result_complete or info.backend != gfx.render_backend_nvidia or
                     info.timeline == 0 or info.point == 0 or info.device_generation != self.identity.device_generation or
-                    info.reset_generation != self.identity.reset_generation) return error.Receipt;
+                    info.reset_generation != self.identity.reset_generation) {
+                    self.line("NVIDIA render receipt: render={} result={d} backend={d}/{d} flags={x} fence={d}:{d} device={d}/{d} reset={d}/{d}",
+                        .{render,info.result,info.backend,gfx.render_backend_nvidia,info.flags,info.timeline,info.point,
+                          info.device_generation,self.identity.device_generation,info.reset_generation,self.identity.reset_generation});
+                    return error.Receipt;
+                }
                 var identity: gfx.R4GfxDeviceInfo = undefined;
                 try check(self.api.device_info(&self.device, &identity));
                 if (identity.backend != self.identity.backend or identity.adapter_id != self.identity.adapter_id or
