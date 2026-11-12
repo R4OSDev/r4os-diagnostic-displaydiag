@@ -4,12 +4,12 @@ const gfx = @import("r4gfx");
 const a = r4os.abi;
 const ok = a.gfx_buffer_result_ok;
 
-pub fn run(app: *r4os.App, require_driver: bool) i32 {
+pub fn run(app: *r4os.App2, require_driver: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const buffers = draw.buffers();
-    const library = gfx.ApiV1Client.init(app.startContext()) catch return 1;
-    const render = gfx.RenderV1Client.init(app.startContext()) catch return 1;
+    const library = gfx.ApiV1Client.init2(app.startContext()) catch return 1;
+    const render = gfx.RenderV1Client.init2(app.startContext()) catch return 1;
     var before: a.GfxBufferStats = .{};
     var passed = buffers.stats(&before) == ok and exercise(&sys, &buffers, &library, &render);
     passed = passed and @import("render_resources.zig").run(app);

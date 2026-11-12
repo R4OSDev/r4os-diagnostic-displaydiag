@@ -9,7 +9,7 @@ pub const Runtime = struct {
     irq_count: usize = 0,
     work: [12]u32 = @splat(0),
 
-    pub fn capture(app: *r4os.App) ?Runtime {
+    pub fn capture(app: *r4os.App2) ?Runtime {
         const dev = app.devicesLowLevel() orelse return null;
         const work = dev.performanceDriverWork(0) orelse return null;
         var value: Runtime = .{ .work = .{ work.used_slots, work.queued_slots, work.running_slots,
@@ -24,16 +24,16 @@ pub const Runtime = struct {
         return if (value.irq_count != 0) value else null;
     }
 
-    pub fn balanced(before: Runtime, app: *r4os.App) bool {
+    pub fn balanced(before: Runtime, app: *r4os.App2) bool {
         const sys = app.system();
-        const limit = sys.ticks() +| sys.ticksFromMilliseconds(1000);
+        var budget = @import("budget.zig").milliseconds(&sys, 1000) catch return false;
         while (true) {
             const after = capture(app) orelse return false;
             if (std.meta.eql(before, after)) {
                 sys.println("DISPLAYD runtime balance: OK IRQ-registrations work-slots deadline-slots waiters");
                 return true;
             }
-            if (sys.ticks() >= limit) break;
+            _ = budget.remainingTicks() catch break;
             sys.sleepTicks(1);
         }
         sys.println("DISPLAYD runtime balance: FAILED IRQ/work/deadline counters did not return within 1000ms");
@@ -65,11 +65,12 @@ pub fn buffers(sys: *const r4os.r4sys.Context, before: r4os.abi.GfxBufferStats, 
 // and idle mapping eviction. Still require every live counter to return to
 // its original value, with a finite deadline and the final mismatch report.
 pub fn waitBuffers(sys: *const r4os.r4sys.Context, memory: *const r4os.gfx_buffers.Context, before: r4os.abi.GfxBufferStats) bool {
-    const limit = sys.ticks() +| sys.ticksFromMilliseconds(1000);
+    var budget = @import("budget.zig").milliseconds(sys, 1000) catch return false;
     var after: r4os.abi.GfxBufferStats = .{};
     while (true) {
         if (memory.stats(&after) != r4os.abi.gfx_buffer_result_ok) return false;
-        if (std.meta.eql(before, after) or sys.ticks() >= limit) break;
+        if (std.meta.eql(before, after)) break;
+        _ = budget.remainingTicks() catch break;
         sys.sleepTicks(1);
     }
     return buffers(sys, before, after);

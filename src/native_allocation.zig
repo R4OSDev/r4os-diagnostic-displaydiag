@@ -2,7 +2,7 @@
 const std = @import("std");
 const r4os = @import("r4os");
 const a = r4os.abi;
-pub fn run(app: *r4os.App) bool {
+pub fn run(app: *r4os.App2) bool {
     const sys = app.system();
     if (!@import("buffers.zig").logContains(&sys, "EXAMPLE.R4D gfx-allocation: ready synthetic-backing no-GPU")) return true;
     sys.println("EXAMPLE.R4D gfx-allocation: ready synthetic-backing no-GPU");

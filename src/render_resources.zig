@@ -4,10 +4,10 @@ const r4os = @import("r4os");
 const gfx = @import("r4gfx");
 const nv = @import("r4nv");
 
-pub fn run(app: *r4os.App) bool {
+pub fn run(app: *r4os.App2) bool {
     if (!shaderCache(app)) return false;
     const sys = app.system();
-    const client = gfx.DeviceV1Client.init(app.startContext()) catch |err| {
+    const client = gfx.DeviceV1Client.init2(app.startContext()) catch |err| {
         sys.write("DISPLAYD resources: unavailable reason="); sys.println(@errorName(err));
         return false;
     };
@@ -25,9 +25,9 @@ pub fn run(app: *r4os.App) bool {
     if (closed) allocator.free(storage); // A retained receipt must outlive a failed close.
     return passed and closed;
 }
-fn shaderCache(app: *r4os.App) bool {
+fn shaderCache(app: *r4os.App2) bool {
     const sys = app.system();
-    const client = nv.ShaderV1Client.init(app.startContext()) catch {
+    const client = nv.ShaderV1Client.init2(app.startContext()) catch {
         sys.println("DISPLAYD shaders: unavailable");
         return true;
     };

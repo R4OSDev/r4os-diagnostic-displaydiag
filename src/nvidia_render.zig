@@ -275,11 +275,11 @@ pub const Probe = struct {
     }
 };
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const memory = draw.buffers();
-    const api = gfx.DeviceV1Client.init(app.startContext()) catch return 1;
+    const api = gfx.DeviceV1Client.init2(app.startContext()) catch return 1;
     const size = api.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return 1;
     const allocator = sys.allocator();

@@ -66,11 +66,11 @@ pub fn requested(args: []const u8) bool {
     return args.len != 0;
 }
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const dev = app.devicesLowLevel() orelse return abi.err_no_group;
     const draw = app.drawing() orelse return abi.err_no_group;
-    const options = parse(std.mem.span(sys.argsRaw())) orelse {
+    const options = parse(app) orelse {
         sys.println("DISPLAYD /BASELINE [/PRESENT | /SIZE=WIDTHxHEIGHT] [/TRACE] [/SAMPLES=1..64] [/SAVE=C:\\TEMP\\REPORT.TXT]");
         sys.println("No arguments: compatibility smoke. BASELINE: RAM scenes; PRESENT also writes diagnostic images to the screen.");
         sys.println("SIZE selects bounded offscreen RAM geometry without an active output; incompatible with PRESENT.");
@@ -81,12 +81,16 @@ pub fn run(app: *r4os.App) i32 {
     defer allocator.destroy(report);
     report.* = .{};
     if (options.trace) sys.println("DISPLAYD baseline phase: report-ready");
-    const ok = collect(sys, dev, draw, options, report) and !report.overflow;
+    const ok = collect(app, sys, dev, draw, options, report) and !report.overflow;
     report.line("DISPLAYD baseline result: {s}", .{if (ok) "OK" else "FAILED"});
     if (options.save.len != 0) {
-        var path: [256:0]u8 = @splat(0);
-        @memcpy(path[0..options.save.len], options.save);
-        const written = sys.fileWrite(&path, report.bytes[0..report.len]);
+        const path = r4os.FilePath.parse(options.save) catch return 2;
+        const files = app.files() orelse return 1;
+        const written: i32 = switch (files.write(path.asZ(), report.bytes[0..report.len])) {
+            .bytes => |count| @intCast(count),
+            .failure => |code| code,
+            .end => 0,
+        };
         if (written != @as(i32, @intCast(report.len)) or report.overflow) {
             sys.println("DISPLAYD baseline save: FAILED");
             return 1;
@@ -97,11 +101,14 @@ pub fn run(app: *r4os.App) i32 {
     return if (ok) 0 else 1;
 }
 
-fn parse(args: []const u8) ?Options {
+fn parse(app: *r4os.App2) ?Options {
+    const args = app.args();
     var options = Options{};
     var baseline = false;
-    var tokens = std.mem.tokenizeAny(u8, args, " \t");
-    while (tokens.next()) |token| {
+    var failure: r4os.arguments.Failure = .{};
+    var tokens = app.argCursor(.{ .quotes = 0 }, &failure) catch return null;
+    while (tokens.next() catch return null) |raw| {
+        const token = raw.bytes(args) catch return null;
         if (std.ascii.eqlIgnoreCase(token, "/BASELINE")) baseline = true else if (std.ascii.eqlIgnoreCase(token, "/TRACE")) options.trace = true else if (std.ascii.eqlIgnoreCase(token, "/PRESENT")) options.present = true else if (token.len > 9 and std.ascii.eqlIgnoreCase(token[0..9], "/SAMPLES=")) {
             options.samples = std.fmt.parseInt(u32, token[9..], 10) catch return null;
             if (options.samples == 0 or options.samples > scenes.max_samples) return null;
@@ -120,7 +127,7 @@ fn parse(args: []const u8) ?Options {
     return if (baseline and !(options.present and options.width != 0)) options else null;
 }
 
-fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.Context, options: Options, report: *Report) bool {
+fn collect(app: *r4os.App2, sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.Context, options: Options, report: *Report) bool {
     report.line("DISPLAYD baseline schema=2", .{});
     report.line("scope=synthetic-cpu-scenes present={s} samples_per_scene={d}", .{ if (options.present) "yes" else "no", options.samples });
     report.line("timings=monotonic-wall-including-preemption percentiles=nearest-rank warmup=1 limits=64MB-per-buffer,15s-total-measurement-budget", .{});
@@ -128,7 +135,12 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     report.line("cpu-time=scheduler-run-ticks coarse; CPU phase wall spans are not CPU execution time", .{});
     var release: [512]u8 = undefined;
     if (options.trace) sys.println("DISPLAYD baseline phase: release-and-hardware");
-    const read = sys.fileRead("C:\\R4OS\\CONFIG\\VERSION.R4S", &release);
+    const files = app.files() orelse return false;
+    const release_path = r4os.AbsoluteFilePath.parse("C:\\R4OS\\CONFIG\\VERSION.R4S") catch return false;
+    const read: usize = switch (files.readDocumentPrefix(release_path.asZ(), &release, .{ .kind = abi.timeout_kind_finite, .nanoseconds = 1_000_000_000 })) {
+        .value => |value| value.bytes,
+        .failure => 0,
+    };
     if (read > 0) {
         report.write("release-file:\r\n");
         report.write(release[0..@min(@as(usize, @intCast(read)), release.len)]);
@@ -137,7 +149,7 @@ fn collect(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4draw.C
     if (dev.kernelVersion()) |version| report.line("kernel={d}.{d}.{d}", .{ version.major, version.minor, version.patch });
     if (dev.hardwareSummary()) |hardware| report.line("logical-cpus={d} pci-devices={d} pcie-devices={d}", .{ hardware.cpu_logical_processors, hardware.legacy_pci_devices, hardware.pcie_devices });
     if (options.trace) sys.println("DISPLAYD baseline phase: inventory-and-boot-snapshot");
-    hardwareReport(dev, report);
+    if (!hardwareReport(app, dev, report)) return false;
     if (r4os.graphics_status.Snapshot.read(&dev)) |status| {
         var line: [256]u8 = undefined;
         for (0..7) |index| report.line("{s}", .{status.line(&line, index)});
@@ -302,16 +314,24 @@ fn measureScene(sys: r4os.r4sys.Context, dev: r4os.r4dev.Context, draw: r4os.r4d
     return !options.present or scene == .idle or (submit.count == options.samples and rejected == 0);
 }
 
-fn hardwareReport(dev: r4os.r4dev.Context, report: *Report) void {
-    var inventory: abi.DeviceInventorySummary = .{};
-    if (dev.deviceInventorySummary(&inventory) > 0) {
-        var index: u32 = 0;
-        while (index < @min(inventory.total, 128)) : (index += 1) {
-            var record: abi.DeviceInventoryRecord = .{};
-            if (dev.deviceInventoryRecord(index, &record) <= 0) break;
-            // Class codes are bus-specific: USB HID class 3 is not PCI display.
-            if (record.flags & 1 != 0 and record.class_code == 3 and record.vendor_id != 0) report.line("pci-display={x:0>2}:{x:0>2}.{d} id={x:0>4}:{x:0>4} driver={s} status={s}", .{ record.bus_no, record.device_no, record.function_no, record.vendor_id, record.device_id, fixed(&record.driver), fixed(&record.status) });
-        }
+fn hardwareReport(app: *r4os.App2, dev: r4os.r4dev.Context, report: *Report) bool {
+    const provider = app.deviceSnapshotProvider() catch return false;
+    var sizing = r4os.device_snapshot.Snapshot.init(.{}, 0, provider) catch return false;
+    defer _ = sizing.close() catch {};
+    const needed = sizing.capture(false) catch return false;
+    if (needed.status != @intFromEnum(r4os.device_snapshot.Status.capacity) and
+        needed.status != @intFromEnum(r4os.device_snapshot.Status.complete)) return false;
+    const allocator = app.allocator() orelse return false;
+    const records = allocator.alloc(abi.DeviceInventoryRecord, needed.info.required_count) catch return false;
+    defer allocator.free(records);
+    const bytes = std.mem.sliceAsBytes(records);
+    var snapshot = r4os.device_snapshot.Snapshot.init(.{ .address = @intFromPtr(bytes.ptr), .length = bytes.len }, @intCast(records.len), provider) catch return false;
+    defer _ = snapshot.close() catch {};
+    const captured = snapshot.capture(false) catch return false;
+    if (captured.status != @intFromEnum(r4os.device_snapshot.Status.complete)) return false;
+    for (snapshot.records() catch return false) |record| {
+        // Class codes are bus-specific: USB HID class 3 is not PCI display.
+        if (record.flags & 1 != 0 and record.class_code == 3 and record.vendor_id != 0) report.line("pci-display={x:0>2}:{x:0>2}.{d} id={x:0>4}:{x:0>4} driver={s} status={s}", .{ record.bus_no, record.device_no, record.function_no, record.vendor_id, record.device_id, fixed(&record.driver), fixed(&record.status) });
     }
     report.line("subsystem-id=unavailable pci-revision=unavailable chip-id=unavailable vbios=unavailable BAR-sizes=unavailable irq-capabilities=unavailable", .{});
     report.line("reason=not-cached-by-R4DEV; no-foreign-PCI-config-or-GPU-register-access; owner-probe-required", .{});
@@ -325,6 +345,7 @@ fn hardwareReport(dev: r4os.r4dev.Context, report: *Report) void {
             for (0..8) |row| report.line("EDID-{d:0>3}={x}", .{ row * 16, base[row * 16 ..][0..16] });
         }
     }
+    return true;
 }
 
 fn fixed(bytes: []const u8) []const u8 {

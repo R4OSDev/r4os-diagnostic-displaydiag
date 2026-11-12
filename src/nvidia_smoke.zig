@@ -184,10 +184,10 @@ const Scene = struct {
     }
 };
 
-fn runScene(app: *r4os.App, round: u32) bool {
+fn runScene(app: *r4os.App2, round: u32) bool {
     const sys = app.system();
     const allocator = sys.allocator();
-    const api = gfx.DeviceV1Client.init(app.startContext()) catch return false;
+    const api = gfx.DeviceV1Client.init2(app.startContext()) catch return false;
     const size = api.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return false;
     const storage = allocator.alignedAlloc(u8, .fromByteUnits(gfx.device_storage_alignment), @intCast(size)) catch return false;
@@ -216,7 +216,7 @@ fn runScene(app: *r4os.App, round: u32) bool {
     return passed and closed;
 }
 
-fn settledBuffers(app: *r4os.App, out: *a.GfxBufferStats) bool {
+fn settledBuffers(app: *r4os.App2, out: *a.GfxBufferStats) bool {
     const sys = app.system();
     const draw = app.drawing() orelse return false;
     const buffers = draw.buffers();
@@ -236,7 +236,7 @@ fn settledBuffers(app: *r4os.App, out: *a.GfxBufferStats) bool {
     return false;
 }
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const buffers = draw.buffers();

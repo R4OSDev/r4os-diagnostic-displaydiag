@@ -4,7 +4,7 @@
 
 ## Package
 
-- Version: `0.1.70`
+- Version: `0.1.74`
 - Image target: `/R4OS/SOFTWARE/TERMINAL/DIAG/DISPLAYD.R4X`
 - Image scope: `full`
 - Canonical project manifest: `module.R4MF`
@@ -410,3 +410,10 @@ system timer counts are not substituted for live resource counts. The Virtio
 timeout case checks the exact retiring primary BO and unchanged other counters.
 Software evidence: workspace Docs/Deployment/GrafikStabilitaet07943.txt; SMP4
 logs belong to Distribution/Tests/Reports/0.79.43. Physical NVIDIA evidence is separate.
+
+API migration 0.90.82
+--------------------
+The normal App2/Query2 consumer selects the real init2 contexts of the independent R4GFX/NV/AMD/NAK/ACO bindings and compiler workers. Technical Query2 imports accompany their unchanged functional V1 interfaces; optional native GPU libraries stay optional. Baseline inventory uses one complete passive copy, metadata/stream helpers read release data, and common monotonic budgets bound queue/resource polling. Existing pixel, fence, generation, cancellation, task-reaping and exact resource oracles stay strict. A queued timer-IRQ fixture is a model, not a physical GPU or copied-device-pixels receipt.
+
+Local source, artifact and runtime evidence: Research/API-ABI/Migration/0.90.82/
+in the coordinating workspace. Physical hardware and Windows are separate qualifications.

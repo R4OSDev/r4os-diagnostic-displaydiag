@@ -5,9 +5,9 @@ const r4os = @import("r4os");
 const gfx = @import("r4gfx");
 const a = r4os.abi;
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
-    const client = gfx.DeviceV1Client.init(app.startContext()) catch {
+    const client = gfx.DeviceV1Client.init2(app.startContext()) catch {
         sys.println("DISPLAYD swapchain: FAILED DEVICE_V1 revision8 required"); return 1;
     };
     const allocator = sys.allocator();

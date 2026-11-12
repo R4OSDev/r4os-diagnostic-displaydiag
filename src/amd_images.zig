@@ -33,9 +33,9 @@ fn exercise(client: c.ImageV1Client, scratch: []u8) !void {
     r.modifier = 0x0200000000401a01;
     if (client.calculate(&r, scratch.ptr, 16, &layout, &mips, 15) != c.status_oom or !std.meta.eql(before, layout)) return error.Allocation;
 }
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
-    const client = c.ImageV1Client.init(app.startContext()) catch {
+    const client = c.ImageV1Client.init2(app.startContext()) catch {
         sys.println("DISPLAYD AMDIMAGE: FAILED optional R4AMD IMAGE_V1 unavailable");
         return 1;
     };

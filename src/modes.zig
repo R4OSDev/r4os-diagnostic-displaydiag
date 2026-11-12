@@ -2,7 +2,7 @@
 // Normal NVIDIA outputs never match this virtual connector and are untouched.
 const r4os = @import("r4os");
 const a = r4os.abi;
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return a.err_no_group;
     const outputs = draw.outputs();
@@ -59,7 +59,7 @@ pub fn run(app: *r4os.App) i32 {
     sys.println("DISPLAYD modes: OK async-worker geometry=320x200,640x480 mouse=bounded confirm=yes explicit-rollback=yes timer-rollback=yes rejected=unchanged early-release=held GPU-commands=none");
     return 0;
 }
-fn geometry(app: *r4os.App, width: u32, height: u32) bool {
+fn geometry(app: *r4os.App2, width: u32, height: u32) bool {
     const draw = app.drawing() orelse return false;
     const desk = app.desktop() orelse return false;
     var mouse = @import("std").mem.zeroes(a.Mouse);

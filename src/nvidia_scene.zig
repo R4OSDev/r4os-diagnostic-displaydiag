@@ -19,7 +19,7 @@ fn desc(kind: u32) gfx.R4GfxResourceDesc {
     return value;
 }
 
-fn negative(probe: *Probe, app: *r4os.App, source: gfx.R4GfxResource) !void {
+fn negative(probe: *Probe, app: *r4os.App2, source: gfx.R4GfxResource) !void {
     const draw = app.drawing() orelse return error.Platform;
     const queue = draw.queues();
     var backend: a.GfxBackendInfo = .{};
@@ -30,7 +30,7 @@ fn negative(probe: *Probe, app: *r4os.App, source: gfx.R4GfxResource) !void {
     if (!found or backend.binding.device_generation != probe.identity.device_generation or
         backend.binding.reset_generation != probe.identity.reset_generation) return error.Backend;
     const profile = std.mem.bytesToValue(nv.R4NvDriverProfile, backend.profile.data[0..@sizeOf(nv.R4NvDriverProfile)]);
-    const client = nv.BackendV1Client.init(app.startContext()) catch return error.Platform;
+    const client = nv.BackendV1Client.init2(app.startContext()) catch return error.Platform;
     const identity: nv.R4NvDeviceProfile = .{ .version = 1, .size = @sizeOf(nv.R4NvDeviceProfile),
         .vendor_id = profile.vendor_id, .copy_class = profile.copy_class, .rm_release = profile.rm_release,
         .command_abi = profile.command_abi, .adapter_id = backend.binding.adapter_id,
@@ -70,7 +70,7 @@ fn negative(probe: *Probe, app: *r4os.App, source: gfx.R4GfxResource) !void {
     probe.line("NVIDIA scene boundaries: OK budget0-convert=limit preference=invalid unknown-modifiers=2 metadata-only outputs=unchanged allocations=0", .{});
 }
 
-fn exercise(probe: *Probe, app: *r4os.App, tiled: bool) !void {
+fn exercise(probe: *Probe, app: *r4os.App2, tiled: bool) !void {
     try probe.bind();
     var source_pixels: [cases.source_bytes + 32]u8 = undefined;
     var initial: [bytes]u8 = undefined;
@@ -192,11 +192,11 @@ fn exercise(probe: *Probe, app: *r4os.App, tiled: bool) !void {
     });
 }
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const memory = draw.buffers();
-    const api = gfx.DeviceV1Client.init(app.startContext()) catch return 1;
+    const api = gfx.DeviceV1Client.init2(app.startContext()) catch return 1;
     const size = api.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return 1;
     const allocator = sys.allocator();

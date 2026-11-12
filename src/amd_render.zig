@@ -16,7 +16,7 @@ fn packets(words: []const u32) !void {
         at += count;
     }
 }
-fn exercise(app: *r4os.App, client: c.RenderV1Client, images: c.ImageV1Client, scratch: []u8) !void {
+fn exercise(app: *r4os.App2, client: c.RenderV1Client, images: c.ImageV1Client, scratch: []u8) !void {
     const sys = app.system();
     var code: [8192]u8 = undefined;
     var shaders: [6]c.R4AmdShader = undefined;
@@ -76,12 +76,12 @@ fn exercise(app: *r4os.App, client: c.RenderV1Client, images: c.ImageV1Client, s
         !std.mem.eql(u32, &words, &indexed) or written != indexed_count) return error.IndexBounds;
     if (client.encode_draw(&draw, &words, 80, &words[0]) != c.status_invalid or !std.mem.eql(u32, &words, &indexed)) return error.Alias;
 }
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
-    const client = c.RenderV1Client.init(app.startContext()) catch {
+    const client = c.RenderV1Client.init2(app.startContext()) catch {
         sys.println("DISPLAYD AMDRENDER: FAILED optional R4AMD RENDER_V1 unavailable"); return 1;
     };
-    const images = c.ImageV1Client.init(app.startContext()) catch {
+    const images = c.ImageV1Client.init2(app.startContext()) catch {
         sys.println("DISPLAYD AMDRENDER: FAILED optional R4AMD IMAGE_V1 unavailable"); return 1;
     };
     const allocator = sys.allocator();

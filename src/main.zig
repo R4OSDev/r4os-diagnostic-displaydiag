@@ -7,7 +7,7 @@ const App = struct {
     dev: r4os.r4dev.Context,
     draw: r4os.r4draw.Context,
 
-    fn init(r4_app: *r4os.App) ?App {
+    fn init(r4_app: *r4os.App2) ?App {
         return .{
             .sys = r4_app.system(),
             .dev = r4_app.devicesLowLevel() orelse return null,
@@ -377,9 +377,12 @@ const App = struct {
     }
 };
 
-pub fn r4_app_main(r4_app: *r4os.App) i32 {
+pub fn r4_app_main(r4_app: *r4os.App2) i32 {
+    var failure: r4os.arguments.Failure = .{};
+    var cursor = r4_app.argCursor(.{ .quotes = 0 }, &failure) catch return 2;
+    while (cursor.next() catch return 2) |_| {}
     const sys = r4_app.system();
-    const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t\r\n");
+    const args = std.mem.trim(u8, std.mem.span(sys.argsRaw()), " \t");
     if (args.len > 8 and std.ascii.eqlIgnoreCase(args[0..8], "/DRIVER ")) {
         const owner = std.fmt.parseInt(u32, std.mem.trim(u8, args[8..], " \t"), 10) catch return 1;
         const dev = r4_app.devicesLowLevel() orelse return r4os.abi.err_no_group;

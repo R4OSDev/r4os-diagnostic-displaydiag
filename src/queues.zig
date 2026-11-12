@@ -1,5 +1,6 @@
 const std = @import("std");
 const r4os = @import("r4os");
+const budgets = @import("budget.zig");
 const producer = @import("r4gfx_queue");
 const a = r4os.abi;
 const ok = a.gfx_queue_ok;
@@ -24,7 +25,7 @@ fn bound(context: *const r4os.gfx_queue.Context, adapter: u32) ?a.GfxBackendBind
 fn config(binding: a.GfxBackendBinding) a.GfxQueueConfig {
     return .{ .adapter_id = binding.adapter_id, .milestone = binding.milestone, .device_generation = binding.device_generation, .reset_generation = binding.reset_generation };
 }
-pub fn run(app: *r4os.App, native: bool) i32 {
+pub fn run(app: *r4os.App2, native: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const buffers = draw.buffers();
@@ -45,7 +46,7 @@ pub fn run(app: *r4os.App, native: bool) i32 {
 
 const child_path = "C:\\R4OS\\SOFTWARE\\TERMINAL\\DIAG\\DISPLAYD.R4X";
 const child_marker = "GFX-QUEUE-CHILD ";
-pub fn child(app: *r4os.App) i32 {
+pub fn child(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const buffers = draw.buffers();
@@ -83,7 +84,7 @@ fn readChildFence(sys: *const r4os.r4sys.Context, id: u32) ?a.GfxFence {
     if (tokens.next() != null or values[0] > std.math.maxInt(u32) or values[1] > std.math.maxInt(u32)) return null;
     return .{ .slot = @intCast(values[0]), .adapter_id = @intCast(values[1]), .timeline = values[2], .point = values[3], .device_generation = values[4], .reset_generation = values[5] };
 }
-fn childBlocked(sys: *const r4os.r4sys.Context, child_handle: a.ProgramProcessHandle) bool {
+fn childBlocked(sys: *const r4os.r4sys.Context, child_handle: a.ProgramProcessHandle, budget: *r4os.rpc_budget.Budget) bool {
     var cursor: a.ProgramInventoryCursor = .{};
     var summary: a.ProgramInventorySummary = .{};
     if (sys.programInventoryBegin(&cursor, &summary) != a.program_handle_ok) return false;
@@ -91,6 +92,7 @@ fn childBlocked(sys: *const r4os.r4sys.Context, child_handle: a.ProgramProcessHa
     var blocked: usize = 0;
     // Bounded complete inventory; an epoch restart never counts as success.
     for (0..32) |_| {
+        _ = budget.remainingTicks() catch return false;
         var page: a.ProgramInventoryPageInfo = .{};
         if (sys.programInventoryTasks(&cursor, &tasks, &page) != a.program_handle_ok or
             page.status == a.program_inventory_status_restart or page.returned > tasks.len) return false;
@@ -113,14 +115,15 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
         _ = sys.programHandleWait(&handle, sys.ticksFromMilliseconds(5000), &completion);
         _ = sys.programHandleReap(&handle, &completion);
     };
-    const start = sys.ticks();
+    var admission = budgets.milliseconds(sys, 2000) catch return false;
     var fence: ?a.GfxFence = null;
-    while (sys.ticks() - start < sys.ticksFromMilliseconds(2000)) {
+    while (true) {
+        _ = admission.remainingTicks() catch break;
         fence = readChildFence(sys, handle.instance_id);
-        if (fence != null and childBlocked(sys, handle)) break;
+        if (fence != null and childBlocked(sys, handle, &admission)) break;
         sys.sleepTicks(1);
     }
-    if (fence == null or !childBlocked(sys, handle)) return fail(sys, @src().line);
+    if (fence == null or !childBlocked(sys, handle, &admission)) return fail(sys, @src().line);
     var status: a.GfxFenceStatus = .{};
     if (context.query(&fence.?, &status) != ok or status.flags != 3) return fail(sys, @src().line);
     // Keep one external waiter until physical completion. The producer's
@@ -128,9 +131,9 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
     waits[0] = .{ .context = context.*, .fence = fence.?, .timeout = sys.ticksFromMilliseconds(5000) };
     var thread: a.ProgramJoinHandle = .{};
     if (sys.threadCreateHandle(waitThread, @intFromPtr(&waits[0]), 128 * 1024, 0, &thread) != a.thread_ok) return fail(sys, @src().line);
-    const enrolled = sys.ticks();
+    var enrollment = budgets.milliseconds(sys, 1000) catch return false;
     while (@atomicLoad(u32, &waits[0].entered, .acquire) == 0) {
-        if (sys.ticks() - enrolled >= sys.ticksFromMilliseconds(1000)) return fail(sys, @src().line);
+        _ = enrollment.remainingTicks() catch return fail(sys, @src().line);
         sys.sleepTicks(1);
     }
     if (sys.programHandleKill(&handle) != a.program_handle_ok) return fail(sys, @src().line);
@@ -142,8 +145,9 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
     sys.println("DISPLAYD queues kill: producer=reaped before-IRQ");
     var code: i32 = -1;
     if (sys.threadHandleJoin(&thread, sys.ticksFromMilliseconds(5000), &code) != a.thread_ok or code != 0) return fail(sys, @src().line);
-    const retired = sys.ticks();
-    while (sys.ticks() - retired < sys.ticksFromMilliseconds(1000)) {
+    var retirement = budgets.milliseconds(sys, 1000) catch return false;
+    while (true) {
+        _ = retirement.remainingTicks() catch break;
         const rc = context.query(&fence.?, &status);
         if (rc == a.gfx_queue_error_stale) {
             // Queue retirement and the ordinary mapping worker are separate
@@ -151,7 +155,7 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
             // release before accepting the common BO accounting baseline.
             const memory_marker = "EXAMPLE.R4D gfx-queue retained: OK producer=closed work=ordinary same-BO=2 extents=exact maps=4";
             while (!@import("buffers.zig").logContains(sys, memory_marker)) {
-                if (sys.ticks() - retired >= sys.ticksFromMilliseconds(1000)) return fail(sys, @src().line);
+                _ = retirement.remainingTicks() catch return fail(sys, @src().line);
                 sys.sleepTicks(1);
             }
             sys.println(memory_marker);
@@ -161,7 +165,7 @@ fn killedProducer(sys: *const r4os.r4sys.Context, context: *const r4os.gfx_queue
             while (true) {
                 if (buffers.stats(&stats) != ok) return fail(sys, @src().line);
                 if (stats.retained_bytes == retained_before) break;
-                if (sys.ticks() - retired >= sys.ticksFromMilliseconds(1000)) return fail(sys, @src().line);
+                _ = retirement.remainingTicks() catch return fail(sys, @src().line);
                 sys.sleepTicks(1);
             }
             sys.println("DISPLAYD queues kill: OK blocked-tasks=3 producer=reaped DMA=retained-until-IRQ fence=retired");
@@ -220,8 +224,9 @@ const InputProgress = struct { sys: r4os.r4sys.Context = undefined, context: r4o
 var input_progress = InputProgress{};
 fn inputThread(_: u64) callconv(.c) i32 {
     const value = &input_progress;
-    const start = value.sys.ticks();
-    while (value.sys.ticks() - start < value.sys.ticksFromMilliseconds(5000)) {
+    var budget = budgets.milliseconds(&value.sys, 5000) catch return 1;
+    while (true) {
+        _ = budget.remainingTicks() catch break;
         var status: a.GfxFenceStatus = .{};
         if (value.context.query(&value.fence, &status) != ok or (status.flags & a.gfx_queue_flag_device_active) == 0) break;
         const key = value.sys.readKey();
@@ -246,8 +251,9 @@ fn driver(sys: *const r4os.r4sys.Context, buffers: *const r4os.gfx_buffers.Conte
     for (&refs) |*ref| if (buffers.create(&.{ .byte_length = 4091, .usage = 15 }, ref) != ok) return fail(sys, @src().line);
     var status: a.GfxFenceStatus = .{};
     if (queue.copy(.{ .source = refs[0].reference, .target = refs[1].reference, .source_offset = 3, .target_offset = 5, .bytes = 4079, .deadline_ns = deadline(sys) }, &status) != ok) return fail(sys, @src().line);
-    const start = sys.ticks();
-    while ((status.flags & a.gfx_queue_flag_device_active) == 0 and sys.ticks() - start < sys.ticksFromMilliseconds(1000)) {
+    var admission = budgets.milliseconds(sys, 1000) catch return false;
+    while ((status.flags & a.gfx_queue_flag_device_active) == 0) {
+        _ = admission.remainingTicks() catch break;
         sys.sleepTicks(1);
         if (context.query(&status.fence, &status) != ok) return fail(sys, @src().line);
     }

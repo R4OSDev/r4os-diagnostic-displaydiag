@@ -23,9 +23,9 @@ fn compile(job: *worker.Worker, request: c.R4AcoRequest) i32 {
 fn key(binary: c.R4AcoBinary) c.R4AcoCacheKey {
     return .{ .version = 1, .size = @sizeOf(c.R4AcoCacheKey), .vendor_id = 0x1002, .device_id = 0x15d8, .chip_revision = 0x41, .gfx_profile = 902, .stage = binary.stage, .resource_abi = 1, .command_abi = 1, .driver_version = 1, .format = 875713112, .reserved = 0, .device_generation = 1, .reset_generation = 1, .pipeline_layout = 1, .source_hash = binary.source_hash, .pipeline_hash = .{ .h0 = 1, .h1 = 2, .h2 = 3, .h3 = 4 } };
 }
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
-    var job = worker.Worker.init(app) catch return fail(&sys, @src().line, c.status_unsupported);
+    var job = worker.Worker.init2(app) catch return fail(&sys, @src().line, c.status_unsupported);
     var code: [4096]u8 = @splat(0);
     var log: [2048]u8 = @splat(0);
     var request: c.R4AcoRequest = .{ .version = 1, .size = @sizeOf(c.R4AcoRequest), .stage = 5, .device_id = 0x15d8, .chip_revision = 0x41, .flags = 0, .word_count = 0, .entry_length = 4, .words = 0, .entry = @intFromPtr("main".ptr), .budget_bytes = 64 * 1024 * 1024, .deadline_ns = 0, .code = @intFromPtr(&code), .code_capacity = code.len, .log_capacity = log.len, .log = @intFromPtr(&log) };

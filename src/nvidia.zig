@@ -3,7 +3,7 @@ const r4os = @import("r4os");
 
 // Replays the driver's bounded boot records. This diagnostic never performs
 // a second PCI scan, maps registers or promotes a PCI name into chip evidence.
-pub fn run(app: *r4os.App, filter: []const u8) i32 {
+pub fn run(app: *r4os.App2, filter: []const u8) i32 {
     const sys = app.system();
     if (filter.len > 128 or std.mem.indexOfAny(u8, filter, "\r\n") != null) {
         sys.println("DISPLAYD /NVIDIA [text filter, up to 128 bytes]");

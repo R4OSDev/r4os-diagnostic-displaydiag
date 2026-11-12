@@ -4,9 +4,9 @@ const std = @import("std");
 const r4os = @import("r4os");
 const gfx = @import("r4gfx");
 const a = r4os.abi;
-pub fn run(app: *r4os.App) bool {
+pub fn run(app: *r4os.App2) bool {
     const sys = app.system();
-    const client = gfx.DeviceV1Client.init(app.startContext()) catch return false;
+    const client = gfx.DeviceV1Client.init2(app.startContext()) catch return false;
     const allocator = sys.allocator();
     const size = client.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return false;

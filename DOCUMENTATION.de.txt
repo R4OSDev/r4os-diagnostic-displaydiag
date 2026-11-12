@@ -351,3 +351,10 @@ zu0.80.33. Der echte Laptopvergleich AMD/Software sowie Present, Multihead
 und Video unter Druck erfolgen ausschliesslich in0.80.39. Die alten
 NVIDIA-Baselineabschnitte oben beschreiben deren damaligen Messpfad, nicht
 die inzwischen asynchronen AMD-DEVICE_V1-Queues.
+
+API migration 0.90.82
+--------------------
+The normal App2/Query2 consumer selects the real init2 contexts of the independent R4GFX/NV/AMD/NAK/ACO bindings and compiler workers. Technical Query2 imports accompany their unchanged functional V1 interfaces; optional native GPU libraries stay optional. Baseline inventory uses one complete passive copy, metadata/stream helpers read release data, and common monotonic budgets bound queue/resource polling. Existing pixel, fence, generation, cancellation, task-reaping and exact resource oracles stay strict. A queued timer-IRQ fixture is a model, not a physical GPU or copied-device-pixels receipt.
+
+Local source, artifact and runtime evidence: Research/API-ABI/Migration/0.90.82/
+in the coordinating workspace. Physical hardware and Windows are separate qualifications.

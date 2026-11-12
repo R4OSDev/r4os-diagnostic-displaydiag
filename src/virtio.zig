@@ -2,7 +2,7 @@ const std = @import("std");
 const r4os = @import("r4os");
 const a = r4os.abi;
 
-pub fn exercise(app: *r4os.App, expect_failure: bool, expect_resize: bool) i32 {
+pub fn exercise(app: *r4os.App2, expect_failure: bool, expect_resize: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const dev = app.devicesLowLevel() orelse return 1;
@@ -112,7 +112,7 @@ fn outputSnapshot(outputs: anytype, adapter: u32) ?a.GfxOutputInfo {
 
 // Report the driver's normal structured boot log through diagnostic stdout.
 // No driver UART path and no inference from PCI presence alone.
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     var chunk: [2048]u8 = undefined;
     var line: [600]u8 = undefined;

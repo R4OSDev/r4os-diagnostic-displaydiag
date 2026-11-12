@@ -172,10 +172,10 @@ const Scene = struct {
         self.sys.println("AMD profile pixels=32768 verified; present=not-requested; clocks=/POWER; allocation and warm-up excluded from phase intervals");
     }
 };
-pub fn run(app: *r4os.App, native: bool) i32 {
+pub fn run(app: *r4os.App2, native: bool) i32 {
     const sys = app.system();
     const allocator = sys.allocator();
-    const api = gfx.DeviceV1Client.init(app.startContext()) catch return 1;
+    const api = gfx.DeviceV1Client.init2(app.startContext()) catch return 1;
     const size = api.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return 1;
     const storage = allocator.alignedAlloc(u8, .fromByteUnits(gfx.device_storage_alignment), @intCast(size)) catch return 1;

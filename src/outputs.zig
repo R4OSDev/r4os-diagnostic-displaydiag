@@ -19,7 +19,7 @@ fn find(ctx: *const r4os.gfx_outputs.Context, adapter: u32) ?a.GfxOutputInfo {
     }
     return null;
 }
-pub fn inventory(app: *r4os.App, dump_raw: bool) i32 {
+pub fn inventory(app: *r4os.App2, dump_raw: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return a.err_no_group;
     const ctx = draw.outputs();
@@ -182,7 +182,7 @@ fn catalogChanged(sys: *const r4os.r4sys.Context) i32 {
     sys.println("DISPLAYD receivers: catalog changed; repeat the complete read");
     return 2;
 }
-pub fn run(app: *r4os.App, native: bool) i32 {
+pub fn run(app: *r4os.App2, native: bool) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const ctx = draw.outputs();
@@ -196,7 +196,7 @@ pub fn run(app: *r4os.App, native: bool) i32 {
     sys.println(if (passed) "DISPLAYD outputs result: OK resources=balanced hardware-writes=none" else "DISPLAYD outputs result: FAILED");
     return if (passed) 0 else 1;
 }
-fn firmware(app: *r4os.App, ctx: *const r4os.gfx_outputs.Context) bool {
+fn firmware(app: *r4os.App2, ctx: *const r4os.gfx_outputs.Context) bool {
     const sys = app.system();
     const dev = app.devicesLowLevel() orelse return false;
     const draw = app.drawing() orelse return false;
@@ -258,7 +258,7 @@ fn finish(sys: *const r4os.r4sys.Context, queue: *producer.Queue, result: *a.Gfx
     defer _ = queue.context.release(&fence);
     return queue.context.wait(&fence, sys.ticksFromMilliseconds(3000), a.gfx_queue_wait_resources_released, result) == a.gfx_queue_ok and result.result == expected;
 }
-fn hotplug(app: *r4os.App, ctx: *const r4os.gfx_outputs.Context) bool {
+fn hotplug(app: *r4os.App2, ctx: *const r4os.gfx_outputs.Context) bool {
     const sys = app.system();
     const draw = app.drawing() orelse return false;
     const desk = app.desktop() orelse return false;

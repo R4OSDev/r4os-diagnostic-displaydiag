@@ -21,7 +21,7 @@ fn pattern(index: u64, round: u32) u8 {
 }
 
 const Probe = struct {
-    app: *r4os.App,
+    app: *r4os.App2,
     sys: r4os.r4sys.Context,
     memory: r4os.gfx_buffers.Context,
     queues: r4os.gfx_queue.Context,
@@ -507,7 +507,7 @@ const Probe = struct {
         self.exact_bytes += 20480;
     }
     fn copyBackend(self: *Probe) !struct { api: nv.BackendV1Client, copy_class: u32 } {
-        const api = try nv.BackendV1Client.init(self.app.startContext());
+        const api = try nv.BackendV1Client.init2(self.app.startContext());
         var properties: a.GfxBackendProperties = .{};
         try self.checked(self.queues.backendProperties(&self.backend.binding, &properties));
         if (properties.interface_id_lo != nv.backend_v1_header.interface_id_lo or
@@ -852,7 +852,7 @@ fn childReference(sys: *const r4os.r4sys.Context, id: u32) ?a.GfxBufferReference
         .buffer = .{ .id = @intCast(values[2]), .generation = values[3] } };
 }
 
-pub fn child(app: *r4os.App) i32 {
+pub fn child(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const memory = draw.buffers();
@@ -876,8 +876,8 @@ pub fn child(app: *r4os.App) i32 {
     return 1;
 }
 
-fn nativeBackend(app: *r4os.App, queues: r4os.gfx_queue.Context) !a.GfxBackendInfo {
-    const api = try gfx.DeviceV1Client.init(app.startContext());
+fn nativeBackend(app: *r4os.App2, queues: r4os.gfx_queue.Context) !a.GfxBackendInfo {
+    const api = try gfx.DeviceV1Client.init2(app.startContext());
     const size = api.storage_size();
     if (size == 0 or size > std.math.maxInt(usize)) return error.Size;
     const allocator = app.system().allocator();
@@ -903,7 +903,7 @@ fn nativeBackend(app: *r4os.App, queues: r4os.gfx_queue.Context) !a.GfxBackendIn
     return error.NativeUnavailable;
 }
 
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return 1;
     const queues = draw.queues();

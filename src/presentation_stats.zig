@@ -3,7 +3,7 @@ const std = @import("std");
 const r4os = @import("r4os");
 const a = r4os.abi;
 
-pub fn run(app: *r4os.App, args: []const u8) i32 {
+pub fn run(app: *r4os.App2, args: []const u8) i32 {
     const sys = app.system();
     const draw = app.drawing() orelse return a.err_no_group;
     const tail = std.mem.trim(u8, args[6..], " \t");

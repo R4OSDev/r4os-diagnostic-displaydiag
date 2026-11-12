@@ -22,9 +22,9 @@ fn compile(job: *worker.Worker, request: c.R4NakRequest) i32 {
 fn keyFor(binary: c.R4NakBinary) c.R4NakCacheKey {
     return .{ .version = 1, .size = @sizeOf(c.R4NakCacheKey), .vendor_id = 0x10de, .device_id = 0x2504, .chipset = 0x177, .sm = binary.sm, .stage = binary.stage, .driver_version = 124, .command_abi = 1, .resource_abi = 1, .constants_abi = 4, .format = 875713089, .device_generation = 1, .reset_generation = 1, .pipeline_layout = 1, .source_hash = binary.source_hash, .pipeline_hash = .{ .h0 = 123, .h1 = 456, .h2 = 789, .h3 = 1 } };
 }
-pub fn run(app: *r4os.App) i32 {
+pub fn run(app: *r4os.App2) i32 {
     const sys = app.system();
-    var job = worker.Worker.init(app) catch return fail(&sys, @src().line, c.status_unsupported);
+    var job = worker.Worker.init2(app) catch return fail(&sys, @src().line, c.status_unsupported);
     var words = fixture.words;
     var code: [4096]u8 = @splat(0);
     var log: [1024]u8 = @splat(0);
