@@ -358,3 +358,5 @@ The normal App2/Query2 consumer selects the real init2 contexts of the independe
 
 Local source, artifact and runtime evidence: Research/API-ABI/Migration/0.90.82/
 in the coordinating workspace. Physical hardware and Windows are separate qualifications.
+
+DISPLAYD /BLITCHECK prüft den registrierten synchronen XRGB32-Kopierpfad in privatem RAM. Zwei Zielrechtecke ändern 25 von 96 Pixeln. Erst nach einem vollständigen Vergleich meldet die Registrierung SELF_TESTED.

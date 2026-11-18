@@ -429,6 +429,18 @@ pub fn r4_app_main(r4_app: *r4os.App2) i32 {
         (args.len > 6 and std.ascii.eqlIgnoreCase(args[0..6], "/STATS") and (args[6] == ' ' or args[6] == '\t')))
         return @import("presentation_stats.zig").run(r4_app, args);
     if (std.ascii.eqlIgnoreCase(args, "/SWAPCHAIN /TEST")) return @import("swapchains.zig").run(r4_app);
+    if (std.ascii.eqlIgnoreCase(args, "/BLITCHECK")) {
+        var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
+        const rc = app.dev.displayBlitCheck();
+        if (rc == 0) {
+            app.sys.println("DISPLAYD blit: OK regions=2 copied=25 untouched=71");
+        } else {
+            app.sys.write("DISPLAYD blit: FAILED status=");
+            app.sys.printI32(rc);
+            app.sys.println("");
+        }
+        return rc;
+    }
     if (std.ascii.eqlIgnoreCase(args, "/STATE")) {
         var app = App.init(r4_app) orelse return r4os.abi.err_no_group;
         return app.reportState();
